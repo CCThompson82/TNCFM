@@ -39,14 +39,14 @@ def mutate_image(image) :
     #shift the image
     if top > 0 :
         if left > 0 :
-            image_prime = test_img[image.shape[0]//vert_off:, test_img.shape[1]//hor_off:, :]
+            image_prime = image[image.shape[0]//vert_off:, image.shape[1]//hor_off:, :]
         else :
-            image_prime = test_img[image.shape[0]//vert_off:, :-test_img.shape[1]//hor_off, :]
+            image_prime = image[image.shape[0]//vert_off:, :-image.shape[1]//hor_off, :]
     else :
         if left > 0 :
-            image_prime = test_img[:-image.shape[0]//vert_off, test_img.shape[1]//hor_off:, :]
+            image_prime = image[:-image.shape[0]//vert_off, image.shape[1]//hor_off:, :]
         else :
-            image_prime = test_img[:-image.shape[0]//vert_off, :-test_img.shape[1]//hor_off, :]
+            image_prime = image[:-image.shape[0]//vert_off, :-image.shape[1]//hor_off, :]
 
     if flip_hor > 0 :
         image_prime = np.fliplr(image_prime)
@@ -61,7 +61,7 @@ def standardize(image, std_y, std_x) :
     assert len(image.shape) is 3, "Image array is not in 3-dimensions"
 
     image_n = (image.astype(float) - 255.0 / 2) / 255.0 # pixel depth of RGB is 255.0.  Line takes image array to mean == 0
-    image_std = misc.imresize(image_n, std_y, std_x)
+    image_std = misc.imresize(image_n, size = (std_y, std_x))
     return np.expand_dims(image_std, 0) #create 4th dimension.  Will be concatenated in this first dimension for the batch size
 
 
@@ -102,3 +102,40 @@ def generate_epoch_set_list_and_label_array(min_each) :
         np.all(np.sum(master_label_arr,1) == np.ones((8*min_each)))))
     print("     There are 'min_each' labels for each fish column: {}".format(np.all(np.sum(master_label_arr,0) == np.full(8, min_each))))
     return master_file_names, master_label_arr
+
+def make_batch(filename_list, offset, batch_size, std_y, std_x) :
+    """Iterates through a filename list to load an RGB image of any pixel
+    dimensions, mutate the image using the `mutate_image` function, normalize
+    the pixel values and pixel dimensions using the `standardize` function, and
+    return an array for concatenation into a 4D array.  The function can be used
+    to assemble training batches or to bring the validation array into the
+    kernel environment."""
+
+    for filename in filename_list[offset : (offset+batch_size)] :
+        #download the array
+        image = ndimage.imread(filename)
+        assert len(image.shape) == 3, 'Image is not in 3 dimensions'
+        assert (image.shape[2]) == 3, 'Image is not in RGB format'
+        image_mut = mutate_image(image)
+        image_norm = standardize(image_mut, std_y, std_x)
+        try :
+            arr = np.vstack([arr,image_norm])
+        except :
+            arr = image_norm
+    assert arr.shape == (batch_size, std_y, std_x, 3), "ERROR: array ({}) is not of correct dimensions".format(arr.shape)
+    return arr
+
+def make_label(label_arr, offset, batch_size) :
+    """Returns the label associated with a training batch generation.  Fn is
+    necessary for navigating the ends of the epoch list."""
+    return label_arr[offset:(offset+batch_size), :]
+
+def count_nodes(std_y, std_x, pool_steps, final_depth ) :
+    """Calculates the number of flattened nodes after a number of 'VALID' pool
+    steps of strides = [1,2,2,1]"""
+    y = std_y
+    x = std_x
+    for _ in range(pool_steps) :
+        y = (y // 2)
+        x = (x // 2)
+    return y*x*final_depth
