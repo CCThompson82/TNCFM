@@ -3,6 +3,7 @@ Nature Conservancy Fisheries Kaggle Competition.
 
 Dependencies:
     * numpy as np
+    * os
     * scipy.ndimage as ndimage
     * scipy.misc as misc
 
@@ -10,6 +11,7 @@ Dependencies:
 
 #dependencies
 import numpy as np
+import os
 from scipy import ndimage, misc
 
 def mutate_image(image) :
@@ -66,10 +68,10 @@ def standardize(image, std_y, std_x) :
 
 
 def generate_epoch_set_list_and_label_array(min_each) :
-"""Function to generate a list of filenames to be used for each training epoch
-with a corresponding label array.  Most file names will be used  multiple  times
-in order that each fish is drawn into a training batch an equivalent number of
-times."""
+    """Function to generate a list of filenames to be used for each training epoch
+    with a corresponding label array.  Most file names will be used  multiple  times
+    in order that each fish is drawn into a training batch an equivalent number of
+    times."""
     # Count the images in each set and append to a fish_list
     for i, species_ID in enumerate(os.listdir('data/train')[1:]) :
         fish_file_names = []
@@ -93,4 +95,10 @@ times."""
         except :
             master_file_names = fish_file_names
             master_label_arr = fish_label_arr
+
+    print("\nTests")
+    print("     Master list of filenames contains 8 * min_each filenames: {}".format(len(master_file_names)==16000))
+    print("     Label is assigned only once per row entry: {}".format(
+        np.all(np.sum(master_label_arr,1) == np.ones((8*min_each)))))
+    print("     There are 'min_each' labels for each fish column: {}".format(np.all(np.sum(master_label_arr,0) == np.full(8, min_each))))
     return master_file_names, master_label_arr
