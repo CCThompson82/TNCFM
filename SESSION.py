@@ -14,11 +14,23 @@ with tf.Session(graph = graph) as session :
         # generate standardized training set
         X_batch = fd.make_batch(X_train_filenames, offset, batch_size, std_y, std_x)
         y_batch = fd.make_label(y_train, offset, batch_size)
+
         feed_dict = {training_data : X_batch, training_labels : y_batch}
         _, l = session.run([training_op, cross_entropy] , feed_dict = feed_dict)
 
         print(l)
 
-        if (batch_number % 1) == 0 :
+        if (batch_number % 5) == 0 :
             print("Validation calcs...")
-            print(valid_loss.eval())
+            v_offset = 0
+            validation_loss = []
+            while True :
+                v_loss = session.run(valid_loss, feed_dict = {  valid_data : X_valid[v_offset:(v_offset+batch_size), :, :, :],
+                                                                valid_labels : y_valid[v_offset:(v_offset+batch_size), :] })
+
+                validation_loss.append(v_loss)
+                v_offset += batch_size
+                if v_offset == valid_size:
+                    break
+            validation_loss = np.mean(validation_loss)
+            print(validation_loss)

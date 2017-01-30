@@ -7,10 +7,10 @@ graph = tf.Graph()
 with graph.as_default() :
 
     training_data = tf.placeholder(dtype = tf.float32, shape = (batch_size, std_y, std_x, num_channels))
-    valid_data = tf.constant(X_valid) # called from global env
+    valid_data = tf.placeholder(dtype = tf.float32, shape = (batch_size, std_y, std_x, num_channels)) # called from global env
 
     training_labels = tf.placeholder(dtype = tf.int32, shape = (batch_size, num_labels))
-    valid_labels = tf.constant(y_valid) # called from global env
+    valid_labels = tf.placeholder(dtype = tf.int32, shape = (batch_size, num_labels)) # called from global env
 
     # Variables
 
@@ -68,7 +68,8 @@ with graph.as_default() :
     def nn(data, dropout = False) :
 
         c1 = tf.nn.conv2d(data, filter = W_conv1, strides = [1, stride, stride, 1], padding = 'SAME')
-        c2 = tf.nn.conv2d(c1, filter = W_conv2, strides = [1, stride, stride, 1], padding = 'SAME')
+        c1_pool = tf.nn.max_pool(c1, ksize = [1,2,2,1], strides = [1,2,2,1], padding = 'VALID')
+        c2 = tf.nn.conv2d(c1_pool, filter = W_conv2, strides = [1, stride, stride, 1], padding = 'SAME')
         c2_pool = tf.nn.max_pool(c2, ksize = [1, 2, 2, 1], strides = [1, 2, 2, 1], padding = 'VALID')
         c3 = tf.nn.conv2d(c2_pool, filter = W_conv3, strides = [1, stride, stride, 1], padding = 'SAME')
         c4 = tf.nn.conv2d(c3, filter = W_conv4, strides = [1, stride, stride, 1], padding = 'SAME')
@@ -85,17 +86,18 @@ with graph.as_default() :
         c11 = tf.nn.conv2d(c10_pool, filter = W_conv11, strides = [1,stride,stride,1], padding = 'SAME')
         c12 = tf.nn.conv2d(c11, filter = W_conv12, strides = [1, stride, stride, 1], padding = 'SAME')
         c12_pool = tf.nn.max_pool(c12, ksize = [1,2,2,1], strides = [1,2,2,1], padding ='VALID')
+        """
         c13 = tf.nn.conv2d(c12_pool, filter = W_conv13, strides = [1,stride,stride,1], padding = 'SAME')
         c14 = tf.nn.conv2d(c13, filter = W_conv14, strides = [1, stride, stride, 1], padding = 'SAME')
         c14_pool = tf.nn.max_pool(c14, ksize = [1,2,2,1], strides = [1,2,2,1], padding ='VALID')
+        """
 
-
-        flatten = tf.contrib.layers.flatten(c14_pool)
+        flatten = tf.contrib.layers.flatten(c12_pool)
         fc1 = tf.nn.relu(tf.matmul(flatten, W_fc1) + b_fc1)
         fc2 = tf.nn.relu(tf.matmul(fc1, W_fc2) +b_fc2)
         logits = tf.matmul(fc2, W_softmax) + b_softmax
 
-
+        print(c1, c1_pool, c2, c2_pool, c4_pool, c6_pool, c8_pool, c10_pool)
         return logits
 
     with tf.name_scope('Training') :
