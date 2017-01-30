@@ -22,18 +22,18 @@ def mutate_image(image) :
         * flip vertically (0.5)
         * slight distortion of coloring (0.5 for any distortion at all, plus
             random float for amount of distortion)
-        * random horizontal shift (image is cropped vertically between 1/5-1/15
-            the image. random top or bottom is cropped.)
-        * random vertical shift (image is cropped horizontally between 1/10 to
-            1/20 of the image.  random left or right is cropped.) """
+        * random horizontal shift (image is cropped vertically between 1/10 to
+            1/15 the image. top or bottom is cropped.)
+        * random vertical shift (image is cropped horizontally between 1/15 to
+            1/20 of the image.  left or right is cropped.) """
     assert len(image.shape) == 3 , 'Image is not in 3D'
     assert image.shape[2] == 3, 'Image is not in RGB format'
 
     flip_hor, flip_ver, sigma, vert_off, hor_off, top, left = [np.random.randint(0,2),
                                                     np.random.randint(0,2),
                                                     np.random.choice([0, np.sqrt(np.random.random())]),
-                                                    np.random.randint(5,15),
-                                                    np.random.randint(10,20),
+                                                    np.random.randint(10,15),
+                                                    np.random.randint(15,20),
                                                     np.random.randint(0,2),
                                                     np.random.randint(0,2)]
     #shift the image
@@ -59,10 +59,9 @@ def standardize(image, std_y, std_x) :
     """Normalizes and resizes an image array to a standard height, length, and
     pixel range."""
     assert len(image.shape) is 3, "Image array is not in 3-dimensions"
-
-    image_n = (image.astype(float) - 255.0 / 2) / 255.0 # pixel depth of RGB is 255.0.  Line takes image array to mean == 0
-    image_std = misc.imresize(image_n, size = (std_y, std_x))
-    return np.expand_dims(image_std, 0) #create 4th dimension.  Will be concatenated in this first dimension for the batch size
+    image_std = misc.imresize(image, size = (std_y, std_x))
+    image_n = (image_std.astype(np.float32) - 255.0 / 2) / 255.0 # pixel depth of RGB is 255.0.  Line takes image array to mean == 0
+    return np.expand_dims(image_n, 0) #create 4th dimension.  Will be concatenated in this first dimension for the batch size
 
 
 
