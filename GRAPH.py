@@ -17,33 +17,29 @@ with graph.as_default() :
     with tf.variable_scope('Variables') :
         with tf.variable_scope('Convolutions') :
             W_conv1 = tf.Variable(
-                        tf.truncated_normal([kernel1, kernel1, num_channels, conv1_depth], stddev = stddev))
+                        tf.truncated_normal([kernel_sizes[0], kernel_sizes[0], num_channels, conv_depths[0]], stddev = stddev))
             W_conv2 = tf.Variable(
-                        tf.truncated_normal([kernel2, kernel2, conv1_depth, conv2_depth], stddev = stddev))
+                        tf.truncated_normal([kernel_sizes[1], kernel_sizes[1], conv_depths[0], conv_depths[1]], stddev = stddev))
             W_conv3 = tf.Variable(
-                        tf.truncated_normal([kernel3, kernel3, conv2_depth, conv3_depth], stddev = stddev))
+                        tf.truncated_normal([kernel_sizes[2], kernel_sizes[2], conv_depths[1], conv_depths[2]], stddev = stddev))
             W_conv4 = tf.Variable(
-                        tf.truncated_normal([kernel4, kernel4, conv3_depth, conv4_depth], stddev = stddev))
+                        tf.truncated_normal([kernel_sizes[3], kernel_sizes[3], conv_depths[2], conv_depths[3]], stddev = stddev))
             W_conv5 = tf.Variable(
-                        tf.truncated_normal([kernel5, kernel5, conv4_depth, conv5_depth], stddev = stddev))
+                        tf.truncated_normal([kernel_sizes[4], kernel_sizes[4], conv_depths[3], conv_depths[4]], stddev = stddev))
             W_conv6 = tf.Variable(
-                        tf.truncated_normal([kernel6, kernel6, conv5_depth, conv6_depth], stddev = stddev))
+                        tf.truncated_normal([kernel_sizes[5], kernel_sizes[5], conv_depths[4], conv_depths[5]], stddev = stddev))
             W_conv7 = tf.Variable(
-                        tf.truncated_normal([kernel7, kernel7, conv6_depth, conv7_depth], stddev = stddev))
+                        tf.truncated_normal([kernel_sizes[6], kernel_sizes[6], conv_depths[5], conv_depths[6]], stddev = stddev))
             W_conv8 = tf.Variable(
-                        tf.truncated_normal([kernel8, kernel8, conv7_depth, conv8_depth], stddev = stddev))
+                        tf.truncated_normal([kernel_sizes[7], kernel_sizes[7], conv_depths[6], conv_depths[7]], stddev = stddev))
             W_conv9 = tf.Variable(
-                        tf.truncated_normal([kernel9, kernel9, conv8_depth, conv9_depth], stddev = stddev))
+                        tf.truncated_normal([kernel_sizes[8], kernel_sizes[8], conv_depths[7], conv_depths[8]], stddev = stddev))
             W_conv10 = tf.Variable(
-                        tf.truncated_normal([kernel10, kernel10, conv9_depth, conv10_depth], stddev = stddev))
+                        tf.truncated_normal([kernel_sizes[9], kernel_sizes[9], conv_depths[8], conv_depths[9]], stddev = stddev))
             W_conv11 = tf.Variable(
-                        tf.truncated_normal([kernel11, kernel11, conv10_depth, conv11_depth], stddev = stddev))
+                        tf.truncated_normal([kernel_sizes[10], kernel_sizes[10], conv_depths[9], conv_depths[10]], stddev = stddev))
             W_conv12 = tf.Variable(
-                        tf.truncated_normal([kernel12, kernel12, conv11_depth, conv12_depth], stddev = stddev))
-            W_conv13 = tf.Variable(
-                        tf.truncated_normal([kernel13, kernel13, conv12_depth, conv13_depth], stddev = stddev))
-            W_conv14 = tf.Variable(
-                        tf.truncated_normal([kernel13, kernel13, conv13_depth, conv14_depth], stddev = stddev))
+                        tf.truncated_normal([kernel_sizes[11], kernel_sizes[11], conv_depths[10], conv_depths[11]], stddev = stddev))
 
 
         with tf.variable_scope('Fully_connected') :
@@ -86,18 +82,13 @@ with graph.as_default() :
         c11 = tf.nn.conv2d(c10_pool, filter = W_conv11, strides = [1,stride,stride,1], padding = 'SAME')
         c12 = tf.nn.conv2d(c11, filter = W_conv12, strides = [1, stride, stride, 1], padding = 'SAME')
         c12_pool = tf.nn.max_pool(c12, ksize = [1,2,2,1], strides = [1,2,2,1], padding ='VALID')
-        """
-        c13 = tf.nn.conv2d(c12_pool, filter = W_conv13, strides = [1,stride,stride,1], padding = 'SAME')
-        c14 = tf.nn.conv2d(c13, filter = W_conv14, strides = [1, stride, stride, 1], padding = 'SAME')
-        c14_pool = tf.nn.max_pool(c14, ksize = [1,2,2,1], strides = [1,2,2,1], padding ='VALID')
-        """
+
 
         flatten = tf.contrib.layers.flatten(c12_pool)
         fc1 = tf.nn.relu(tf.matmul(flatten, W_fc1) + b_fc1)
         fc2 = tf.nn.relu(tf.matmul(fc1, W_fc2) +b_fc2)
         logits = tf.matmul(fc2, W_softmax) + b_softmax
 
-        print(c1, c1_pool, c2, c2_pool, c4_pool, c6_pool, c8_pool, c10_pool)
         return logits
 
     with tf.name_scope('Training') :
