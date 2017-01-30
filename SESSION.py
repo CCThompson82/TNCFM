@@ -23,7 +23,7 @@ with tf.Session(graph = graph) as session :
         train_writer.add_summary(summary, batch_number*batch_size)
 
 
-        if (batch_number % 5) == 0 :
+        if (batch_number % valid_every) == 0 :
             v_offset = 0
             validation_loss = []
             validation_accuracy = []
