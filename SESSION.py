@@ -18,7 +18,7 @@ with tf.Session(graph = graph) as session :
         X_batch = fd.make_batch(X_train_filenames, offset, batch_size, std_y, std_x)
         y_batch = fd.make_label(y_train, offset, batch_size)
 
-        feed_dict = {training_data : X_batch, training_labels : y_batch}
+        feed_dict = {training_data : X_batch, training_labels : y_batch, keep_prob_convs : kp_convs, keep_prob_hidden : kp_hidden }
         _, summary = session.run([training_op, train_summaries] , feed_dict = feed_dict)
         train_writer.add_summary(summary, batch_number*batch_size)
 
@@ -30,7 +30,8 @@ with tf.Session(graph = graph) as session :
             while v_offset != valid_size :
                 v_sum = session.run(valid_summaries,
                                     feed_dict = {   valid_data : X_valid[v_offset:(v_offset+batch_size), :, :, :],
-                                                    valid_labels : y_valid[v_offset:(v_offset+batch_size), :] })
+                                                    valid_labels : y_valid[v_offset:(v_offset+batch_size), :],
+                                                    keep_prob_convs : 1.0 , keep_prob_hidden : 1.0 })
                 valid_writer.add_summary(v_sum, ((batch_number*batch_size) + 10*(v_offset/valid_size)))
                 v_offset += batch_size
 
