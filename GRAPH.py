@@ -105,7 +105,7 @@ with graph.as_default() :
         training_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(training_loss, global_step = steps)
 
     with tf.name_scope('Validation') :
-        valid_logits = nn(valid_data, keep_prob_convs, keep_prob_hidden)
+        valid_logits = nn(valid_data, 1.0, 1.0)
         valid_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(valid_logits, valid_labels))
 
 
@@ -115,9 +115,9 @@ with graph.as_default() :
             sc = tf.summary.scalar('Training_Cross_entropy', training_loss)
             slr = tf.summary.scalar('Learning_rate', learning_rate)
             sa = tf.summary.scalar('Training_Accuracy', training_acc)
-            train_summaries = tf.summary.merge([sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9, sw10, sw11, sw12, sf1, sf2, sb1, sb2, swsm, sbsm, sc, slr, sa])
+            #train_summaries = tf.summary.merge([sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9, sw10, sw11, sw12, sf1, sf2, sb1, sb2, swsm, sbsm, sc, slr, sa])
 
             valid_acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(valid_logits, 1), tf.argmax(valid_labels,1)), tf.float32))
             vl = tf.summary.scalar('Validation_Cross_entropy', valid_loss)
             va = tf.summary.scalar('Validation_Accuracy', valid_acc)
-            valid_summaries = tf.summary.merge([vl,va])
+            summaries = tf.summary.merge_all()

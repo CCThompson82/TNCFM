@@ -102,7 +102,7 @@ def generate_epoch_set_list_and_label_array(min_each) :
     print("     There are 'min_each' labels for each fish column: {}".format(np.all(np.sum(master_label_arr,0) == np.full(8, min_each))))
     return master_file_names, master_label_arr
 
-def make_batch(filename_list, offset, batch_size, std_y, std_x) :
+def make_batch(filename_list, offset, batch_size, std_y, std_x, mutate = True) :
     """Iterates through a filename list to load an RGB image of any pixel
     dimensions, mutate the image using the `mutate_image` function, normalize
     the pixel values and pixel dimensions using the `standardize` function, and
@@ -110,24 +110,56 @@ def make_batch(filename_list, offset, batch_size, std_y, std_x) :
     to assemble training batches or to bring the validation array into the
     kernel environment."""
 
-    for filename in filename_list[offset : (offset+batch_size)] :
-        #download the array
-        image = ndimage.imread(filename)
+    entry_counter = batch_size
+    index = offset
+    while entry_counter > 0 :
+        try :
+            image = ndimage.imread(filename_list[index])
+        except : # tripped if index exceeds the index length of filename_list
+            index = 0
+            image = ndimage.imread(filename_list[index])
+
         assert len(image.shape) == 3, 'Image is not in 3 dimensions'
         assert (image.shape[2]) == 3, 'Image is not in RGB format'
-        image_mut = mutate_image(image)
+        if mutate :
+            image_mut = mutate_image(image)
+        else :
+            image_mut = image
         image_norm = standardize(image_mut, std_y, std_x)
-        try :
-            arr = np.vstack([arr,image_norm])
-        except :
+
+        if entry_counter == batch_size :
             arr = image_norm
-    assert arr.shape == (batch_size, std_y, std_x, 3), "ERROR: array ({}) is not of correct dimensions".format(arr.shape)
+        else :
+            arr = np.vstack([arr, image_norm])
+
+        entry_counter -= 1
+        index += 1
+
+    assert arr.shape == (batch_size, std_y, std_x, 3), "ERROR: array <{}> is not of correct dimensions: <{}>".format(arr.shape, (batch_size, std_y, std_x, 3))
     return arr
+
+
 
 def make_label(label_arr, offset, batch_size) :
     """Returns the label associated with a training batch generation.  Fn is
     necessary for navigating the ends of the epoch list."""
-    return label_arr[offset:(offset+batch_size), :]
+    entry_counter = batch_size
+    index = offset
+    while entry_counter > 0 :
+        try :
+            entry = label_arr[index, :]
+        except : # tripped if index exceeds the index length of filename_list
+            index = 0
+            image = label_arr[index, :]
+
+        if entry_counter == batch_size :
+            arr = entry
+        else :
+            arr = np.vstack([arr, entry])
+        entry_counter -= 1
+        index += 1
+    assert arr.shape == (batch_size, 8), "ERROR in label retrieval"
+    return arr
 
 def count_nodes(std_y, std_x, pool_steps, final_depth ) :
     """Calculates the number of flattened nodes after a number of 'VALID' pool
