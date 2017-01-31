@@ -101,8 +101,8 @@ with graph.as_default() :
 
     with tf.name_scope('BackProp') :
         training_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, training_labels))
-        learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = decay_rate, staircase = True)
-        training_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(training_loss, global_step = steps)
+        #learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = decay_rate, staircase = True)
+        training_op = tf.train.AdagradOptimizer(init_rate).minimize(training_loss, global_step = steps)
 
     with tf.name_scope('Validation') :
         valid_logits = nn(valid_data, 1.0, 1.0)
@@ -113,7 +113,7 @@ with graph.as_default() :
             training_acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, 1), tf.argmax(training_labels,1)), tf.float32))
 
             sc = tf.summary.scalar('Training_Cross_entropy', training_loss)
-            slr = tf.summary.scalar('Learning_rate', learning_rate)
+            #slr = tf.summary.scalar('Learning_rate', learning_rate)
             sa = tf.summary.scalar('Training_Accuracy', training_acc)
             #train_summaries = tf.summary.merge([sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9, sw10, sw11, sw12, sf1, sf2, sb1, sb2, swsm, sbsm, sc, slr, sa])
 
