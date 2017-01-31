@@ -7,7 +7,9 @@ Dependencies:
     * scipy.ndimage as ndimage
     * scipy.misc as misc
 
-"""
+# TODO : Make a test for mutation in make_batch to ensure observed overfitting
+# is due to model parameters and not to me simply having had repeated each image
+# over and over in the training set. """
 
 #dependencies
 import numpy as np
