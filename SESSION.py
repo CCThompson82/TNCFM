@@ -19,7 +19,7 @@ with tf.Session(graph = graph) as session :
         # Determine offset for training batch collection
         offset = (batch_number * batch_size) - (y_train.shape[0]*(batch_number * batch_size) // y_train.shape[0])
         # generate standardized training set
-        X_batch = fd.make_batch(X_train_filenames, offset, batch_size, std_y, std_x)
+        X_batch = fd.make_batch(X_train_filenames, offset, batch_size, std_y, std_x, mutate = True)
         y_batch = fd.make_label(y_train, offset, batch_size)
 
         if record == True :

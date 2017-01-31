@@ -101,7 +101,7 @@ with graph.as_default() :
 
     with tf.name_scope('BackProp') :
         training_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, training_labels))
-        learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = 0.5, staircase = True)
+        learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = decay_rate, staircase = True)
         training_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(training_loss, global_step = steps)
 
     with tf.name_scope('Validation') :
