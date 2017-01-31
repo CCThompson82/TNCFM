@@ -8,7 +8,7 @@ with tf.Session(graph = graph) as session :
     tf.global_variables_initializer().run()
     print("Initialized!\n")
 
-    print("\nRun the command line:\ntensorboard --logdir='{}'\n\n to view your tensorboard dashboard summary!".format(logs_path))
+    print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'".format(logs_path))
 
     non_record_counter = valid_every
     record_counter = y_valid.shape[0] // batch_size # in order to iterate  through the whole validation set
@@ -16,7 +16,6 @@ with tf.Session(graph = graph) as session :
     assert (y_valid.shape[0] % batch_size) == 0, 'Validation size is not wholely divisible by batch_size, please ammend to batch_size that is a factor of {}'.format(y_valid.shape[0])
     record = True
     for batch_number in range(int(num_epochs * y_train.shape[0] // batch_size)) :
-        print(batch_number+1)
         # Determine offset for training batch collection
         offset = (batch_number * batch_size) - (y_train.shape[0]*(batch_number * batch_size) // y_train.shape[0])
         # generate standardized training set
@@ -37,7 +36,6 @@ with tf.Session(graph = graph) as session :
             record_counter -= 1
             if record_counter == 0 :
                 record = False
-                print("record switched to false")
                 record_counter = y_valid.shape[0] // batch_size # reset the counter
 
         else :
@@ -49,7 +47,6 @@ with tf.Session(graph = graph) as session :
             non_record_counter -= 1
             if non_record_counter == 0 :
                 record = True
-                print("record switch to True")
                 non_record_counter = valid_every # reset the non_record_counter
 
 
