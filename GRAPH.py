@@ -96,17 +96,35 @@ with graph.as_default() :
 
         return logits
 
+    def regularize_weights() :
+        return (beta * (
+                tf.nn.l2_loss(W_conv1) +
+                tf.nn.l2_loss(W_conv2) +
+                tf.nn.l2_loss(W_conv3) +
+                tf.nn.l2_loss(W_conv4) +
+                tf.nn.l2_loss(W_conv5) +
+                tf.nn.l2_loss(W_conv6) +
+                tf.nn.l2_loss(W_conv7) +
+                tf.nn.l2_loss(W_conv8) +
+                tf.nn.l2_loss(W_conv9) +
+                tf.nn.l2_loss(W_conv10) +
+                tf.nn.l2_loss(W_conv11) +
+                tf.nn.l2_loss(W_conv12) +
+                tf.nn.l2_loss(W_fc1) +
+                tf.nn.l2_loss(W_fc2) +
+                tf.nn.l2_loss(W_softmax)))
+
     with tf.name_scope('Training') :
         logits = nn(training_data, keep_prob_convs, keep_prob_hidden)
 
     with tf.name_scope('BackProp') :
-        training_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, training_labels))
+        training_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, training_labels)) + regularize_weights()
         #learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = decay_rate, staircase = True)
         training_op = tf.train.AdagradOptimizer(init_rate).minimize(training_loss, global_step = steps)
 
     with tf.name_scope('Validation') :
         valid_logits = nn(valid_data, 1.0, 1.0)
-        valid_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(valid_logits, valid_labels))
+        valid_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(valid_logits, valid_labels)) + regularize_weights()
 
 
     with tf.name_scope('Summaries') :

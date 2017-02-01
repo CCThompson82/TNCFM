@@ -9,11 +9,11 @@ with tf.Session(graph = graph) as session :
     print("Initialized!\n")
 
     print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'".format(logs_path))
-
-    non_record_counter = valid_every
-    record_counter = y_valid.shape[0] // batch_size # in order to iterate  through the whole validation set
     # NOTE : if y_valid.shape[0] is not divisible wholely by batch_size, then the final remainder examples in the validation set will never be used.
     assert (y_valid.shape[0] % batch_size) == 0, 'Validation size is not wholely divisible by batch_size, please ammend to batch_size that is a factor of {}'.format(y_valid.shape[0])
+    non_record_counter = valid_every
+    record_counter = y_valid.shape[0] // batch_size # in order to iterate  through the whole validation set
+
     record = True
     for batch_number in range(int(num_epochs * y_train.shape[0] // batch_size)) :
         # Determine offset for training batch collection
@@ -35,7 +35,8 @@ with tf.Session(graph = graph) as session :
             writer.add_summary(summary, batch_number*batch_size)
             record_counter -= 1
             if record_counter == 0 :
-                record = False
+                if batch_number > 5 * y_valid.shape[0] / batch_size :  # Measure the validation set 5 times prior to allowing the record variable to be switched off.  After this, breaks in validation are given to save on the overall run time.  Should save time in knowing whether to kill a run or not
+                    record = False
                 record_counter = y_valid.shape[0] // batch_size # reset the counter
 
         else :
