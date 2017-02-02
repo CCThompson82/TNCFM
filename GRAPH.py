@@ -11,9 +11,6 @@ with graph.as_default() :
     with tf.name_scope('Valid_input') :
         valid_data = tf.placeholder(dtype = tf.float32, shape = (batch_size, std_y, std_x, num_channels))
         valid_labels = tf.placeholder(dtype = tf.int32, shape = (batch_size, num_labels))
-    with tf.name_scope('keep_probabilities') :
-        keep_prob_convs = tf.placeholder(dtype = tf.float32, shape = ())
-        keep_prob_hidden = tf.placeholder(dtype = tf.float32, shape = ())
 
     # Variables
 
@@ -67,28 +64,28 @@ with graph.as_default() :
             sbsm = tf.summary.histogram('b_softmax', b_softmax)
 
 
-    def nn(data, keep_prob_convs, keep_prob_hidden) :
+    def nn(data, keep_prob_hidden) :
         with tf.name_scope('Convolution') :
-            c1 = tf.nn.dropout(tf.nn.relu(tf.nn.conv2d(data, filter = W_conv1, strides = [1, stride, stride, 1], padding = 'SAME')), keep_prob_convs)
+            c1 = tf.nn.relu(tf.nn.conv2d(data, filter = W_conv1, strides = [1, stride, stride, 1], padding = 'SAME'))
             c2 = tf.nn.relu(tf.nn.conv2d(c1, filter = W_conv2, strides = [1, stride, stride, 1], padding = 'SAME'))
             c2_pool = tf.nn.max_pool(c2, ksize = [1, 2, 2, 1], strides = [1, 2, 2, 1], padding = 'VALID')
-            c3 = tf.nn.dropout(tf.nn.relu(tf.nn.conv2d(c2_pool, filter = W_conv3, strides = [1, stride, stride, 1], padding = 'SAME')), keep_prob_convs)
+            c3 =  tf.nn.relu(tf.nn.conv2d(c2_pool, filter = W_conv3, strides = [1, stride, stride, 1], padding = 'SAME'))
             c4 = tf.nn.relu(tf.nn.conv2d(c3, filter = W_conv4, strides = [1, stride, stride, 1], padding = 'SAME'))
             c4_pool = tf.nn.max_pool(c4, ksize = [1,2,2,1], strides = [1, 2,2,1], padding = 'VALID')
-            c5 = tf.nn.dropout(tf.nn.relu(tf.nn.conv2d(c4_pool, filter = W_conv5, strides = [1, stride, stride, 1], padding = 'SAME')), keep_prob_convs)
+            c5 = tf.nn.relu(tf.nn.conv2d(c4_pool, filter = W_conv5, strides = [1, stride, stride, 1], padding = 'SAME'))
             c6 = tf.nn.relu(tf.nn.conv2d(c5, filter = W_conv6, strides = [1, stride, stride, 1], padding = 'SAME'))
             c6_pool = tf.nn.max_pool(c6, ksize = [1,2,2,1], strides = [1,2,2,1], padding ='VALID')
-            c7 = tf.nn.dropout(tf.nn.relu(tf.nn.conv2d(c6_pool, filter = W_conv7, strides = [1,stride,stride,1], padding = 'SAME')), keep_prob_convs)
+            c7 = tf.nn.relu(tf.nn.conv2d(c6_pool, filter = W_conv7, strides = [1,stride,stride,1], padding = 'SAME'))
             c8 = tf.nn.relu(tf.nn.conv2d(c7, filter = W_conv8, strides = [1, stride, stride, 1], padding = 'SAME'))
             c8_pool = tf.nn.max_pool(c8, ksize = [1,2,2,1], strides = [1,2,2,1], padding ='VALID')
-            c9 = tf.nn.dropout(tf.nn.relu(tf.nn.conv2d(c8_pool, filter = W_conv9, strides = [1,stride,stride,1], padding = 'SAME')), keep_prob_convs)
+            c9 = tf.nn.relu(tf.nn.conv2d(c8_pool, filter = W_conv9, strides = [1,stride,stride,1], padding = 'SAME'))
             c10 = tf.nn.relu(tf.nn.conv2d(c9, filter = W_conv10, strides = [1, stride, stride, 1], padding = 'SAME'))
             c10_pool = tf.nn.max_pool(c10, ksize = [1,2,2,1], strides = [1,2,2,1], padding ='VALID')
-            c11 = tf.nn.dropout(tf.nn.relu(tf.nn.conv2d(c10_pool, filter = W_conv11, strides = [1,stride,stride,1], padding = 'SAME')), keep_prob_convs)
+            c11 = tf.nn.relu(tf.nn.conv2d(c10_pool, filter = W_conv11, strides = [1,stride,stride,1], padding = 'SAME'))
             c12 = tf.nn.relu(tf.nn.conv2d(c11, filter = W_conv12, strides = [1, stride, stride, 1], padding = 'SAME'))
             c12_pool = tf.nn.max_pool(c12, ksize = [1,2,2,1], strides = [1,2,2,1], padding ='VALID')
         with tf.name_scope('Full_connections') :
-            flatten = tf.nn.dropout(tf.contrib.layers.flatten(c12_pool), keep_prob_hidden)
+            flatten = tf.contrib.layers.flatten(c12_pool), keep_prob_hidden)
             fc1 = tf.nn.dropout(tf.nn.relu(tf.matmul(flatten, W_fc1) + b_fc1), keep_prob_hidden)
             fc2 = tf.nn.dropout(tf.nn.relu(tf.matmul(fc1, W_fc2) +b_fc2), keep_prob_hidden)
         with tf.name_scope('Softmax_Classification') :
@@ -115,7 +112,7 @@ with graph.as_default() :
                 tf.nn.l2_loss(W_softmax)))
 
     with tf.name_scope('Training') :
-        logits = nn(training_data, keep_prob_convs, keep_prob_hidden)
+        logits = nn(training_data, kp_hidden)
 
     with tf.name_scope('BackProp') :
         training_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, training_labels)) + regularize_weights()
@@ -123,7 +120,7 @@ with graph.as_default() :
         training_op = tf.train.AdagradOptimizer(init_rate).minimize(training_loss, global_step = steps)
 
     with tf.name_scope('Validation') :
-        valid_logits = nn(valid_data, 1.0, 1.0)
+        valid_logits = nn(valid_data, 1.0)
         valid_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(valid_logits, valid_labels)) + regularize_weights()
 
 
