@@ -15,19 +15,18 @@ with tf.Session(graph = graph) as session :
     record_counter = y_valid.shape[0] // batch_size # in order to iterate  through the whole validation set
 
     record = True
-    for batch_number in range(int(num_epochs * y_train.shape[0] // batch_size)) :
+    for batch_number in range(int(num_epochs * len(X_filenames) // batch_size)) :
         # Determine offset for training batch collection
-        offset = (batch_number * batch_size) - (y_train.shape[0]*(batch_number * batch_size) // y_train.shape[0])
+        offset = (batch_number * batch_size) - (len(X_filenames)*(batch_number * batch_size) // len(X_filenames))
         # generate standardized training set
-        X_batch = fd.make_batch(X_train_filenames, offset, batch_size, std_y, std_x, mutate = True)
-        y_batch = fd.make_label(y_train, offset, batch_size)
+        X_batch = fd.make_batch(X_filenames, offset, batch_size, std_y, std_x, mutate = True)
+        y_batch = fd.make_label(X_filenames, offset, batch_size)
 
         if record == True :
             v_offset = ((y_valid.shape[0] // batch_size) - record_counter) * batch_size
+
             feed_dict= {    training_data : X_batch,
                             training_labels : y_batch,
-                            keep_prob_convs : kp_convs,
-                            keep_prob_hidden : kp_hidden,
                             valid_data : X_valid[v_offset:(v_offset+batch_size), :, :, :],
                             valid_labels : y_valid[v_offset:(v_offset+batch_size), :] }
 
@@ -41,9 +40,7 @@ with tf.Session(graph = graph) as session :
 
         else :
             feed_dict = {   training_data : X_batch,
-                            training_labels : y_batch,
-                            keep_prob_convs : kp_convs,
-                            keep_prob_hidden : kp_hidden }
+                            training_labels : y_batch }
             _ = session.run(training_op, feed_dict = feed_dict)
             non_record_counter -= 1
             if non_record_counter == 0 :

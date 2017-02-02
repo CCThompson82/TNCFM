@@ -9,9 +9,7 @@ Dependencies:
     * scipy.special as special
     * matplotlib.pyplot as plt
 
-# TODO : Make a test for mutation in make_batch to ensure observed overfitting
-# is due to model parameters and not to me simply having had repeated each image
-# over and over in the training set. """
+"""
 
 #dependencies
 import numpy as np
@@ -23,14 +21,14 @@ def mutate_image(image) :
     """Receives an image array and returns an image array with a random set of
         distortions.
     Distortions include:
-        * flip horizontally (0.5)
-        * flip vertically (0.5)
-        * slight distortion of coloring (0.5 for any distortion at all, plus
-            random float for amount of distortion)
-        * random horizontal shift (image is cropped vertically between 1/10 to
-            1/15 the image. top or bottom is cropped.)
+        * flip horizontally (p = 0.5)
+        * flip vertically (p = 0.5)
+        * slight distortion of coloring (random sigma for each channel - see
+            shift_colour fn in this module)
+        * random horizontal shift (image is cropped vertically between 1/15 to
+            1/20 the image. top or bottom is randomly chosen for chop.)
         * random vertical shift (image is cropped horizontally between 1/15 to
-            1/20 of the image.  left or right is cropped.) """
+            1/20 of the image.  left or right is randomly chosen for chop.) """
     assert len(image.shape) == 3 , 'Image is not in 3D'
     assert image.shape[2] == 3, 'Image is not in RGB format'
 
@@ -112,7 +110,7 @@ def generate_filenames_list() :
     return master_file_names
 
 
-def generate_epoch_set_list_and_label_array(min_each) :
+def generate_balanced_epoch(min_each, shuffle = True) :
     """Function to generate a list of filenames to be used for each training epoch
     with a corresponding label array.  Most file names will be used  multiple  times
     in order that each fish is drawn into a training batch an equivalent number of
@@ -129,26 +127,17 @@ def generate_epoch_set_list_and_label_array(min_each) :
         fish_file_names = (fish_file_names* multiples) + np.random.choice(fish_file_names, remainder).tolist()
         print("'{}' set contains {} filenames from which to sample".format(species_ID, len(fish_file_names)))
 
-        #make one-hot label array
-        fish_label_arr = np.zeros([min_each, len(os.listdir('data/train')[1:])])
-        fish_label_arr[:, i] = 1
-
         #add to the master list / master array
         try :
             master_file_names = master_file_names + fish_file_names
-            master_label_arr = np.concatenate([master_label_arr,fish_label_arr], 0)
         except :
             master_file_names = fish_file_names
-            master_label_arr = fish_label_arr
-
-    print("\nTests")
-    print("     Master list of filenames contains 8 * min_each filenames: {}".format(len(master_file_names)==16000))
-    print("     Label is assigned only once per row entry: {}".format(
-        np.all(np.sum(master_label_arr,1) == np.ones((8*min_each)))))
-    print("     There are 'min_each' labels for each fish column: {}".format(np.all(np.sum(master_label_arr,0) == np.full(8, min_each))))
-    return master_file_names, master_label_arr
-
-
+    print("{} filenames are in the training set list".format(len(master_file_names)))
+    t = master_file_names[0:5]
+    if shuffle :
+        np.random.shuffle(master_file_names)
+        print("Filename list is shuffled: {}".format(t != master_file_names[0:5]))
+    return master_file_names
 
 def make_batch(filename_list, offset, batch_size, std_y, std_x, normalize = True, mutate = True) :
     """Iterates through a filename list to load an RGB image of any pixel
@@ -185,31 +174,36 @@ def make_batch(filename_list, offset, batch_size, std_y, std_x, normalize = True
         entry_counter -= 1
         index += 1
 
+        if index == len(filename_list) :
+            index = 0
+
     assert arr.shape == (batch_size, std_y, std_x, 3), "ERROR: array <{}> is not of correct dimensions: <{}>".format(arr.shape, (batch_size, std_y, std_x, 3))
     return arr
 
 
 
-def make_label(label_arr, offset, batch_size) :
-    """Returns the label associated with a training batch generation.  Fn is
-    necessary for navigating the ends of the epoch list."""
+def make_label(filename_list, offset, batch_size) :
+    """Returns the label associated with a training batch generation.  Fn also
+    navigates the ends of the epoch list."""
     entry_counter = batch_size
     index = offset
     while entry_counter > 0 :
+        file = filename_list[index]
+        start = file.find('train/') + 6
+        end = file.find('/img')
         try :
-            entry = label_arr[index, :]
-        except : # tripped if index exceeds the index length of filename_list
-            index = 0
-            image = label_arr[index, :]
+            label_arr = np.vstack([label_arr,
+                                  np.array([ file[start:end] == x for x in ['ALB','BET', 'DOL', 'LAG', 'NoF', 'OTHER', 'SHARK', 'YFT']]).astype(int)
+                                    ])
+        except :
+            label_arr = np.array([ file[start:end] == x for x in ['ALB','BET', 'DOL', 'LAG', 'NoF', 'OTHER', 'SHARK', 'YFT']]).astype(int)
 
-        if entry_counter == batch_size :
-            arr = entry
-        else :
-            arr = np.vstack([arr, entry])
         entry_counter -= 1
         index += 1
-    assert arr.shape == (batch_size, 8), "ERROR in label retrieval"
-    return arr
+        if index == len(filename_list) :
+            index = 0
+
+    return label_arr
 
 def count_nodes(std_y, std_x, pool_steps, final_depth ) :
     """Calculates the number of flattened nodes after a number of 'VALID' pool
