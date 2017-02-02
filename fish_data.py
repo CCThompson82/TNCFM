@@ -84,12 +84,15 @@ def shift_colour(image, channel, sigma) :
     new_image[:,:,channel] = panel
     return new_image
 
-def standardize(image, std_y, std_x) :
+def standardize(image, std_y, std_x, normalize = True) :
     """Normalizes and resizes an image array to a standard height, length, and
     pixel range."""
     assert len(image.shape) is 3, "Image array is not in 3-dimensions"
     image_std = misc.imresize(image, size = (std_y, std_x))
-    image_n = (image_std.astype(np.float32) - 255.0 / 2) / 255.0 # pixel depth of RGB is 255.0.  Line takes image array to mean == 0
+    if normalize :
+        image_n = (image_std.astype(np.float32) - 255.0 / 2) / 255.0 # pixel depth of RGB is 255.0.  Line takes image array to mean == 0
+    else :
+        image_n = image_std.astype(np.float32)
     return np.expand_dims(image_n, 0) #create 4th dimension.  Will be concatenated in this first dimension for the batch size
 
 
@@ -109,32 +112,45 @@ def generate_filenames_list() :
     return master_file_names
 
 
-def balance_data_and_label_array(species_ID, min_each) :
+def generate_epoch_set_list_and_label_array(min_each) :
     """Function to generate a list of filenames to be used for each training epoch
     with a corresponding label array.  Most file names will be used  multiple  times
     in order that each fish is drawn into a training batch an equivalent number of
-    times.  Return from this function must be appended / concatenated into a master list
-    / array, respectively."""
+    times."""
+    # Count the images in each set and append to a fish_list
+    for i, species_ID in enumerate(os.listdir('data/train')[1:]) :
+        fish_file_names = []
+        fish_file_names = ['data/train/'+species_ID+'/'+x for x in os.listdir('data/train/'+species_ID) ]
+        fish_count = len(fish_file_names)
+        assert min_each > fish_count, 'Listed minimum number of images is exceeded by the actual number of images.  Increase minimum number to generate a balanced dataset'
+        #tack on multiples of the original fish_file_names and then randomly select a handful of file names to fill out the remainder up to the min_each value
+        multiples = min_each // fish_count
+        remainder = min_each % fish_count
+        fish_file_names = (fish_file_names* multiples) + np.random.choice(fish_file_names, remainder).tolist()
+        print("'{}' set contains {} filenames from which to sample".format(species_ID, len(fish_file_names)))
 
-    fish_file_names = []
-    fish_file_names = ['data/train/'+species_ID+'/'+x for x in os.listdir('data/train/'+species_ID) ]
-    fish_count = len(fish_file_names)
-    assert min_each > fish_count, 'Listed minimum number of images is exceeded by the actual number of images.  Increase minimum number to generate a balanced dataset'
-    #tack on multiples of the original fish_file_names and then randomly select a handful of file names to fill out the remainder up to the min_each value
-    multiples = min_each // fish_count
-    remainder = min_each % fish_count
-    fish_file_names = (fish_file_names* multiples) + np.random.choice(fish_file_names, remainder).tolist()
-    print("'{}' set contains {} filenames from which to sample".format(species_ID, len(fish_file_names)))
+        #make one-hot label array
+        fish_label_arr = np.zeros([min_each, len(os.listdir('data/train')[1:])])
+        fish_label_arr[:, i] = 1
 
-    #make one-hot label array
-    fish_label_arr = np.zeros([min_each, len(os.listdir('data/train')[1:])])
-    fish_label_arr[:, i] = 1
+        #add to the master list / master array
+        try :
+            master_file_names = master_file_names + fish_file_names
+            master_label_arr = np.concatenate([master_label_arr,fish_label_arr], 0)
+        except :
+            master_file_names = fish_file_names
+            master_label_arr = fish_label_arr
 
-    return fish_file_names, fish_label_arr
+    print("\nTests")
+    print("     Master list of filenames contains 8 * min_each filenames: {}".format(len(master_file_names)==16000))
+    print("     Label is assigned only once per row entry: {}".format(
+        np.all(np.sum(master_label_arr,1) == np.ones((8*min_each)))))
+    print("     There are 'min_each' labels for each fish column: {}".format(np.all(np.sum(master_label_arr,0) == np.full(8, min_each))))
+    return master_file_names, master_label_arr
 
 
 
-def make_batch(filename_list, offset, batch_size, std_y, std_x, standardize = True,  mutate = True) :
+def make_batch(filename_list, offset, batch_size, std_y, std_x, normalize = True, mutate = True) :
     """Iterates through a filename list to load an RGB image of any pixel
     dimensions, mutate the image using the `mutate_image` function, normalize
     the pixel values and pixel dimensions using the `standardize` function, and
@@ -159,10 +175,7 @@ def make_batch(filename_list, offset, batch_size, std_y, std_x, standardize = Tr
         else :
             image_mut = image
 
-        if standardize :
-            image_norm = standardize(image_mut, std_y, std_x)
-        else :
-            image_norm = image_mut
+        image_norm = standardize(image_mut, std_y, std_x, normalize)
 
         if entry_counter == batch_size :
             arr = image_norm
