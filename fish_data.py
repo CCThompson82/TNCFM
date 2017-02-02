@@ -33,8 +33,8 @@ def mutate_image(image) :
 
     flip_hor, flip_ver, sigma, vert_off, hor_off, top, left = [np.random.randint(0,2),
                                                     np.random.randint(0,2),
-                                                    np.random.choice([0, np.sqrt(np.random.random())]),
-                                                    np.random.randint(10,15),
+                                                    np.random.normal(0, 0.5, size = 3),
+                                                    np.random.randint(15,20),
                                                     np.random.randint(15,20),
                                                     np.random.randint(0,2),
                                                     np.random.randint(0,2)]
@@ -55,7 +55,31 @@ def mutate_image(image) :
 
     if flip_ver > 0 :
         image_prime = np.flipud(image_prime)
-    return(ndimage.filters.gaussian_filter(image_prime, sigma))
+
+    image_prime = shift_colour(image_prime, channel = 0, sigma = sigma[0] )
+    image_prime = shift_colour(image_prime, channel = 1, sigma = sigma[1] )
+    image_prime = shift_colour(image_prime, channel = 2, sigma = sigma[2] )
+    return image_prime
+
+def shift_colour(image, channel, sigma) :
+    """ Shifts the colour of an RGB image by sigma"""
+    assert len(image.shape) == 3, 'Image not in RGB format'
+
+    new_image = image.copy()
+    panel = new_image[:,:,channel].astype(float)
+    # normalize and clip saturated pixels to avoid infinity terms
+    panel = (panel / 255.0).clip(min = 1e-4, max = 0.9999)
+    # convert pixel values to logits
+    panel = sp.special.logit(panel)
+    # add sigma value to logit values
+    panel = panel + sigma
+    # convert back to sigmoid
+    panel = sp.special.expit(panel)
+    # convert to pixel depth of 255.0
+    panel = panel*255.0
+    # cover up old panel with colour shifted panel
+    new_image[:,:,channel] = panel
+    return new_image
 
 def standardize(image, std_y, std_x) :
     """Normalizes and resizes an image array to a standard height, length, and
@@ -66,6 +90,20 @@ def standardize(image, std_y, std_x) :
     return np.expand_dims(image_n, 0) #create 4th dimension.  Will be concatenated in this first dimension for the batch size
 
 
+
+def generate_filenames_list() :
+    """Iterates through the 'data/train' folders of the working directory to
+    generate a list of filenames"""
+    for i, species_ID in enumerate(os.listdir('data/train')[1:]) :
+        fish_file_names = []
+        fish_file_names = ['data/train/'+species_ID+'/'+x for x in os.listdir('data/train/'+species_ID) ]
+        fish_count = len(fish_file_names)
+
+        try :
+            master_file_names = master_file_names + fish_file_names
+        except :
+            master_file_names = fish_file_names
+    return master_file_names
 
 
 def generate_epoch_set_list_and_label_array(min_each) :
@@ -104,7 +142,7 @@ def generate_epoch_set_list_and_label_array(min_each) :
     print("     There are 'min_each' labels for each fish column: {}".format(np.all(np.sum(master_label_arr,0) == np.full(8, min_each))))
     return master_file_names, master_label_arr
 
-def make_batch(filename_list, offset, batch_size, std_y, std_x, mutate = True) :
+def make_batch(filename_list, offset, batch_size, std_y, std_x, standardize = True,  mutate = True) :
     """Iterates through a filename list to load an RGB image of any pixel
     dimensions, mutate the image using the `mutate_image` function, normalize
     the pixel values and pixel dimensions using the `standardize` function, and
@@ -123,11 +161,16 @@ def make_batch(filename_list, offset, batch_size, std_y, std_x, mutate = True) :
 
         assert len(image.shape) == 3, 'Image is not in 3 dimensions'
         assert (image.shape[2]) == 3, 'Image is not in RGB format'
+
         if mutate :
             image_mut = mutate_image(image)
         else :
             image_mut = image
-        image_norm = standardize(image_mut, std_y, std_x)
+
+        if standardize :
+            image_norm = standardize(image_mut, std_y, std_x)
+        else :
+            image_norm = image_mut
 
         if entry_counter == batch_size :
             arr = image_norm
