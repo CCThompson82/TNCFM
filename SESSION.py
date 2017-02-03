@@ -34,7 +34,7 @@ with tf.Session(graph = graph) as session :
             writer.add_summary(summary, batch_number*batch_size)
             record_counter -= 1
             if record_counter == 0 :
-                if batch_number > 5 * y_valid.shape[0] / batch_size :  # Measure the validation set 5 times prior to allowing the record variable to be switched off.  After this, breaks in validation are given to save on the overall run time.  Should save time in knowing whether to kill a run or not
+                if batch_number > 10 * y_valid.shape[0] / batch_size :  # Measure the validation set 'X' times prior to allowing the record variable to be switched off.  After this, breaks in validation are given to save on the overall run time.  Should save time in knowing whether to kill a run or not
                     record = False
                 record_counter = y_valid.shape[0] // batch_size # reset the counter
 
