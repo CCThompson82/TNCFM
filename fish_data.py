@@ -208,8 +208,8 @@ def make_label(filename_list, offset, batch_size) :
 def count_nodes(std_y, std_x, pool_steps, final_depth ) :
     """Calculates the number of flattened nodes after a number of 'VALID' pool
     steps of strides = [1,2,2,1]"""
-    y = std_y
-    x = std_x
+    y = (std_y // 3) + 1
+    x = (std_x // 3) + 1
     for _ in range(pool_steps) :
         y = (y // 2)
         x = (x // 2)
