@@ -9,6 +9,40 @@ with tf.Session(graph = graph) as session :
     print("Initialized!\n")
 
     print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'".format(logs_path))
+
+
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(sess = session, coord = coord)
+
+    try:
+        step = 0
+        while not coord.should_stop():
+            print(step)
+            # Run one step of the model.  The return values are
+            # the activations from the `train_op` (which is
+            # discarded) and the `loss` op.  To inspect the values
+            # of your ops or variables, you may include them in
+            # the list passed to sess.run() and the value tensors
+            # will be returned in the tuple from the call.
+            d, l = session.run([training_data, training_labels])
+            print(d.shape, l.shape)
+            step += 1
+    except tf.errors.OutOfRangeError:
+        print('Done training for %d steps.' % (step))
+
+      # When done, ask the threads to stop.
+    coord.request_stop()
+
+    # Wait for threads to finish.
+    coord.join(threads)
+
+
+
+
+
+    """
+
+    print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'".format(logs_path))
     # NOTE : if y_valid.shape[0] is not divisible wholely by batch_size, then the final remainder examples in the validation set will never be used.
     assert (y_valid.shape[0] % batch_size) == 0, 'Validation size is not wholely divisible by batch_size, please ammend to batch_size that is a factor of {}'.format(y_valid.shape[0])
     non_record_counter = valid_every
@@ -19,6 +53,7 @@ with tf.Session(graph = graph) as session :
         # Determine offset for training batch collection
         offset = (batch_number * batch_size) - (len(X_filenames)*(batch_number * batch_size) // len(X_filenames))
         # generate standardized training set
+
         X_batch = fd.make_batch(X_filenames, offset, batch_size, std_y, std_x, mutate = True)
         y_batch = fd.make_label(X_filenames, offset, batch_size)
 
@@ -52,3 +87,5 @@ with tf.Session(graph = graph) as session :
 
 
     print("\nFINISHED TRAINING!")
+
+"""

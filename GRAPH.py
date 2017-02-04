@@ -6,12 +6,28 @@ graph = tf.Graph()
 
 with graph.as_default() :
     with tf.name_scope('Training_input') :
-        training_data = tf.placeholder(dtype = tf.float32, shape = (batch_size, std_y, std_x, num_channels))
-        training_labels = tf.placeholder(dtype = tf.int32, shape = (batch_size, num_labels))
+
+        train_q = tf.RandomShuffleQueue(capacity = len(files_train), dtypes = [tf.string, tf.int32], min_after_dequeue = 25)
+        train_q.enqueue_many([files_train, y_train])
+
+        X, y = train_q.dequeue()
+        y.set_shape([8])
+        img = tf.image.decode_jpeg(X, channels = 3)
+        img = tf.image.resize_images(img, size = [std_y, std_x])
+        img = tf.cast(img, tf.float32) * (1.0 / 255.0) - 0.5
+
+        # TODO : insert function for distortion of image
+
+
+
+
+        training_data, training_labels = tf.train.batch([img, y], batch_size = batch_size, capacity = batch_size*2, shapes = [(std_y,std_x, 3), (8)])
+
+    """
     with tf.name_scope('Valid_input') :
         valid_data = tf.placeholder(dtype = tf.float32, shape = (batch_size, std_y, std_x, num_channels))
         valid_labels = tf.placeholder(dtype = tf.int32, shape = (batch_size, num_labels))
-
+    """
     # Variables
 
     with tf.variable_scope('Variables') :
@@ -91,12 +107,6 @@ with graph.as_default() :
                 tf.nn.l2_loss(W_conv4) +
                 tf.nn.l2_loss(W_conv5) +
                 tf.nn.l2_loss(W_conv6) +
-                tf.nn.l2_loss(W_conv7) +
-                tf.nn.l2_loss(W_conv8) +
-                tf.nn.l2_loss(W_conv9) +
-                tf.nn.l2_loss(W_conv10) +
-                tf.nn.l2_loss(W_conv11) +
-                tf.nn.l2_loss(W_conv12) +
                 tf.nn.l2_loss(W_fc1) +
                 tf.nn.l2_loss(W_fc2) +
                 tf.nn.l2_loss(W_softmax)))
@@ -110,11 +120,13 @@ with graph.as_default() :
         #learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = decay_rate, staircase = True)
         training_op = tf.train.AdagradOptimizer(init_rate).minimize(training_loss, global_step = steps)
 
+    """
     with tf.name_scope('Validation') :
         valid_logits = nn(valid_data, 1.0)
         valid_cross_entropy = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(valid_logits, valid_labels))
         valid_loss = valid_cross_entropy + regularize_weights()
 
+    """
 
     with tf.name_scope('Summaries') :
             training_acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, 1), tf.argmax(training_labels,1)), tf.float32))
@@ -123,9 +135,10 @@ with graph.as_default() :
             sa = tf.summary.scalar('Training_Accuracy', training_acc)
             sl = tf.summary.scalar('Training_Loss', training_loss)
 
-
+            """
             valid_acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(valid_logits, 1), tf.argmax(valid_labels,1)), tf.float32))
             vc = tf.summary.scalar('Validation_Cross_entropy', valid_cross_entropy)
             va = tf.summary.scalar('Validation_Accuracy', valid_acc)
             vl = tf.summary.scalar('Validation_Loss', valid_loss)
+            """
             summaries = tf.summary.merge_all()
