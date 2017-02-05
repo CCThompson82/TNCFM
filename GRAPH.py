@@ -54,7 +54,7 @@ with graph.as_default() :
 
         with tf.variable_scope('Fully_connected') :
             W_fc1 = tf.Variable(tf.truncated_normal(
-                            [fd.count_nodes(std_y, std_x, pool_steps = 4, final_depth = final_depth ), fc1_depth],
+                            [fd.count_nodes(std_y, std_x, conv_depths, conv_strides, pool_strides), fc1_depth],
                             stddev = stddev ))
             sf1 = tf.summary.histogram('W_fc1', W_fc1)
             b_fc1 = tf.Variable(tf.zeros([fc1_depth]))
@@ -74,12 +74,42 @@ with graph.as_default() :
 
     def nn(data, keep_prob_hidden) :
         with tf.name_scope('Convolution') :
-            c1 = tf.nn.max_pool(tf.nn.relu(tf.nn.conv2d(data, filter = W_conv1, strides = [1, 3, 3, 1], padding = 'SAME')),ksize = [1,2,2,1], strides = [1,2,2,1], padding ='VALID')
-            c2 = tf.nn.max_pool(tf.nn.relu(tf.nn.conv2d(c1, filter = W_conv2, strides = [1,1,1,1], padding = 'SAME')), ksize = [1,2,2,1], strides = [1,2,2,1], padding = 'VALID')
-            c3 = tf.nn.relu(tf.nn.conv2d(c2, filter = W_conv3, strides = [1,1,1,1], padding = 'SAME'))
-            c4 = tf.nn.max_pool(tf.nn.relu(tf.nn.conv2d(c3, filter = W_conv4, strides = [1,1,1,1], padding = 'SAME')), ksize = [1,2,2,1], strides = [1,2,2,1], padding = 'VALID')
-            c5 = tf.nn.relu(tf.nn.conv2d(c4, filter = W_conv5, strides = [1,1,1,1], padding = 'SAME'))
-            c6 = tf.nn.max_pool(tf.nn.relu(tf.nn.conv2d(c5, filter = W_conv6, strides = [1,1,1,1], padding = 'SAME')), ksize = [1,2,2,1], strides = [1,2,2,1], padding = 'VALID')
+            c1 = tf.nn.max_pool(
+                    tf.nn.relu(
+                        tf.nn.conv2d(data, filter = W_conv1,
+                            strides = [1, conv_strides[0],conv_strides[0], 1],
+                            padding = 'SAME')),
+                    ksize = [1,2,2,1], strides = [1,pool_strides[0], pool_strides[0],1],
+                    padding ='VALID')
+            c2 = tf.nn.max_pool(
+                    tf.nn.relu(
+                        tf.nn.conv2d(c1, filter = W_conv2,
+                            strides = [1,conv_strides[1], conv_strides[1],1],
+                            padding = 'SAME')),
+                    ksize = [1,2,2,1], strides = [1,pool_strides[1],pool_strides[1],1],
+                    padding = 'VALID')
+            c3 = tf.nn.relu(
+                    tf.nn.conv2d(c2, filter = W_conv3,
+                        strides = [1,conv_strides[2], conv_strides[2],1],
+                        padding = 'SAME'))
+            c4 = tf.nn.max_pool(
+                    tf.nn.relu(
+                        tf.nn.conv2d(c3, filter = W_conv4,
+                            strides = [1,conv_strides[3], conv_strides[3],1],
+                            padding = 'SAME')),
+                    ksize = [1,2,2,1], strides = [1,pool_strides[2],pool_strides[2],1],
+                    padding = 'VALID')
+            c5 = tf.nn.relu(
+                    tf.nn.conv2d(c4, filter = W_conv5,
+                        strides = [1,conv_strides[4], conv_strides[4],1],
+                        padding = 'SAME'))
+            c6 = tf.nn.max_pool(
+                    tf.nn.relu(
+                        tf.nn.conv2d(c5, filter = W_conv6,
+                        strides = [1,conv_strides[5], conv_strides[5],1],
+                        padding = 'SAME')),
+                    ksize = [1,2,2,1], strides = [1,pool_strides[3],pool_strides[3],1],
+                    padding = 'VALID')
 
         with tf.name_scope('Full_connections') :
             flatten = tf.nn.dropout(tf.contrib.layers.flatten(c6), keep_prob_hidden)
