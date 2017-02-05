@@ -42,6 +42,7 @@ def decode_image(image_read, size, num_channels = 3,
     assert (len(size) == 2), 'Size does not contain height and width values'
     img = tf.image.decode_jpeg(image_read, channels = num_channels )
     img = tf.image.resize_images(img, size = size)
+    img = (tf.to_float(img) * (1.0 / 255.0)) - 0.5
 
     if mutate :
         # TODO : set assertions based on delta performances in training later, can't have images unrecognizable, e.g.
