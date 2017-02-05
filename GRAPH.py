@@ -119,7 +119,7 @@ with graph.as_default() :
         logits = nn(train_images, kp)
 
     with tf.name_scope('BackProp') :
-        train_cross_entropy = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits, train_labels))
+        train_cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, train_labels))
         training_loss = train_cross_entropy + regularize_weights()
         #learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = decay_rate, staircase = True)
         training_op = tf.train.AdagradOptimizer(init_rate).minimize(training_loss, global_step = steps)
@@ -135,25 +135,37 @@ with graph.as_default() :
                                         batch_size=batch_size
                                         #,num_threads=1
                                         )
-        batch_valid_logits = nn(val_images, 1.0)
-        batch_val_cross_entropy = tf.nn.softmax_cross_entropy_with_logits(batch_valid_logits, val_labels)
-        val_scores = tf.train.batch([batch_val_cross_entropy], batch_size = valid_size, enqueue_many = True, capacity = valid_size)
-        validation_score = tf.reduce_mean(val_scores)
-        validation_loss = validation_score + regularize_weights()
+        with tf.name_scope('Validation_Management') :
+            batch_valid_logits = nn(val_images, 1.0)
+            validation_logits, validation_labels = tf.train.batch(
+                [batch_valid_logits, val_labels], batch_size = valid_size,
+                enqueue_many = True, capacity = valid_size)
 
 
-    """
+            validation_cross_entropy = tf.reduce_mean(
+                                tf.nn.softmax_cross_entropy_with_logits(validation_logits, validation_labels)
+                                )
+
+
+
+
     with tf.name_scope('Summaries') :
-            training_acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, 1), tf.argmax(training_labels,1)), tf.float32))
+            training_acc = tf.reduce_mean(
+                            tf.cast(
+                                tf.equal(
+                                    tf.argmax(logits, 1),tf.argmax(train_labels,1)),
+                            tf.float32))
+
+            valid_acc = tf.reduce_mean(
+                            tf.cast(
+                                tf.equal(
+                                    tf.argmax(validation_logits, 1), tf.argmax(validation_labels,1)),
+                            tf.float32))
 
             sc = tf.summary.scalar('Training_Cross_entropy', train_cross_entropy)
-            sa = tf.summary.scalar('Training_Accuracy', training_acc)
+            sr = tf.summary.scalar('Regularization', training_loss - train_cross_entropy)
             sl = tf.summary.scalar('Training_Loss', training_loss)
-
-            valid_acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(valid_logits, 1), tf.argmax(valid_labels,1)), tf.float32))
-            vc = tf.summary.scalar('Validation_Cross_entropy', valid_cross_entropy)
+            sa = tf.summary.scalar('Training_Accuracy', training_acc)
+            vc = tf.summary.scalar('Validation_Cross_entropy', validation_cross_entropy)
             va = tf.summary.scalar('Validation_Accuracy', valid_acc)
-            vl = tf.summary.scalar('Validation_Loss', valid_loss)
-
             summaries = tf.summary.merge_all()
-    """
