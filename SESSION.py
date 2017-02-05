@@ -8,8 +8,8 @@ with tf.Session(graph = graph) as session :
     threads = tf.train.start_queue_runners(coord = coord)
 
     for i in range(10) :
-        example, lab = session.run([img1, train_label])
-        print(example.shape, lab)
+        a,b,c,d = session.run([train_img1, train_label, val_img1, val_label])
+        print(a.shape, b, c.shape, d)
 
     coord.request_stop()
     coord.join(threads)

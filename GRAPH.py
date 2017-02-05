@@ -12,16 +12,21 @@ with graph.as_default() :
         train_label = train_q[1]
         train_image = tf.read_file(train_q[0])
 
-        img = tf.image.decode_jpeg(train_image, channels = 3)
-        img1 = tf.image.resize_images(img, size = [100,167])
+        train_img = tf.image.decode_jpeg(train_image, channels = num_channels)
+        train_img1 = tf.image.resize_images(train_img, size = [std_y, std_x])
 
 
 
-    """
+
     with tf.name_scope('Valid_input') :
-        valid_data = tf.placeholder(dtype = tf.float32, shape = (batch_size, std_y, std_x, num_channels))
-        valid_labels = tf.placeholder(dtype = tf.int32, shape = (batch_size, num_labels))
-    """
+        val_q = tf.train.slice_input_producer([files_val, y_val], shuffle = False)
+        val_label = val_q[1]
+        val_image = tf.read_file(train_q[0])
+        val_img = tf.image.decode_jpeg(val_image, channels = num_channels)
+        val_img1 = tf.image.resize_images(val_img, size = [std_y, std_x])
+
+
+
     # Variables
 
     with tf.variable_scope('Variables') :
