@@ -16,23 +16,6 @@ with graph.as_default() :
                                     batch_size=batch_size
                                     #,num_threads=1
                                     )
-
-
-
-
-
-    with tf.name_scope('Valid_input') :
-        val_q = tf.train.slice_input_producer([files_val, y_val], shuffle = False)
-        val_label = val_q[1]
-        val_image = fd.decode_image(tf.read_file(val_q[0]), size = [std_y, std_x], mutate = False)
-        val_images, val_labels= tf.train.batch(
-                                    [val_image, val_label],
-                                    batch_size=batch_size
-                                    #,num_threads=1
-                                    )
-
-
-
     # Variables
 
     with tf.variable_scope('Variables') :
@@ -143,9 +126,20 @@ with graph.as_default() :
 
 
     with tf.name_scope('Validation') :
-        valid_logits = nn(val_images, 1.0)
-        valid_cross_entropy = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(valid_logits, val_labels))
-        valid_loss = valid_cross_entropy + regularize_weights()
+        with tf.name_scope('Valid_input') :
+            val_q = tf.train.slice_input_producer([files_val, y_val], shuffle = False)
+            val_label = val_q[1]
+            val_image = fd.decode_image(tf.read_file(val_q[0]), size = [std_y, std_x], mutate = False)
+            val_images, val_labels= tf.train.batch(
+                                        [val_image, val_label],
+                                        batch_size=batch_size
+                                        #,num_threads=1
+                                        )
+        batch_valid_logits = nn(val_images, 1.0)
+        batch_val_cross_entropy = tf.nn.softmax_cross_entropy_with_logits(batch_valid_logits, val_labels)
+        val_scores = tf.train.batch([batch_val_cross_entropy], batch_size = valid_size, enqueue_many = True, capacity = valid_size)
+        validation_score = tf.reduce_mean(val_scores)
+        validation_loss = validation_score + regularize_weights()
 
 
     """

@@ -7,10 +7,17 @@ with tf.Session(graph = graph) as session :
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(coord = coord)
 
+    writer = tf.summary.FileWriter(logs_path, graph = tf.get_default_graph())
+    #valid_writer = tf.summary.FileWriter(logs_path+'/test')
+    print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'".format(logs_path))
+
     for i in range(10) :
-        a,b,c,d, e, f, _ = session.run([train_images, train_labels, val_images, val_labels, train_cross_entropy, valid_cross_entropy, training_op])
-        print(a.shape, b.shape, c.shape, d.shape)
-        print(e, f )
+        a,b,c,_ = session.run([train_images, train_labels, train_cross_entropy, training_op])
+        print(a.shape, b.shape)
+        print(c)
+        if (i % 3) == 0 :
+            vs = validation_score.eval()
+            print(vs)
     coord.request_stop()
     coord.join(threads)
 
@@ -26,17 +33,7 @@ with tf.Session(graph = graph) as session :
 
 
     """
-    #Initialize session
-    writer = tf.summary.FileWriter(logs_path, graph = tf.get_default_graph())
-    #valid_writer = tf.summary.FileWriter(logs_path+'/test')
-    print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'".format(logs_path))
 
-
-
-
-
-
-    print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'".format(logs_path))
     # NOTE : if y_valid.shape[0] is not divisible wholely by batch_size, then the final remainder examples in the validation set will never be used.
     assert (y_valid.shape[0] % batch_size) == 0, 'Validation size is not wholely divisible by batch_size, please ammend to batch_size that is a factor of {}'.format(y_valid.shape[0])
     non_record_counter = valid_every
