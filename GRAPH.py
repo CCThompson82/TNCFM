@@ -71,7 +71,7 @@ with graph.as_default() :
             b_softmax = tf.Variable(tf.zeros([num_labels]))
             sbsm = tf.summary.histogram('b_softmax', b_softmax)
 
-    """
+
     def nn(data, keep_prob_hidden) :
         with tf.name_scope('Convolution') :
             c1 = tf.nn.max_pool(tf.nn.relu(tf.nn.conv2d(data, filter = W_conv1, strides = [1, 3, 3, 1], padding = 'SAME')),ksize = [1,2,2,1], strides = [1,2,2,1], padding ='VALID')
@@ -103,22 +103,22 @@ with graph.as_default() :
                 tf.nn.l2_loss(W_softmax)))
 
     with tf.name_scope('Training') :
-        logits = nn(training_data, kp)
+        logits = nn(train_images, kp)
 
     with tf.name_scope('BackProp') :
-        train_cross_entropy = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits, training_labels))
+        train_cross_entropy = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits, train_labels))
         training_loss = train_cross_entropy + regularize_weights()
         #learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = decay_rate, staircase = True)
         training_op = tf.train.AdagradOptimizer(init_rate).minimize(training_loss, global_step = steps)
 
 
     with tf.name_scope('Validation') :
-        valid_logits = nn(valid_data, 1.0)
-        valid_cross_entropy = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(valid_logits, valid_labels))
+        valid_logits = nn(val_images, 1.0)
+        valid_cross_entropy = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(valid_logits, val_labels))
         valid_loss = valid_cross_entropy + regularize_weights()
 
 
-
+    """
     with tf.name_scope('Summaries') :
             training_acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, 1), tf.argmax(training_labels,1)), tf.float32))
 

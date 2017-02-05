@@ -8,9 +8,9 @@ with tf.Session(graph = graph) as session :
     threads = tf.train.start_queue_runners(coord = coord)
 
     for i in range(10) :
-        a,b,c,d = session.run([train_images, train_labels, val_images, val_labels])
+        a,b,c,d, e, f = session.run([train_images, train_labels, val_images, val_labels, train_cross_entropy, valid_cross_entropy])
         print(a.shape, b.shape, c.shape, d.shape)
-
+        print(e, f )
     coord.request_stop()
     coord.join(threads)
 
