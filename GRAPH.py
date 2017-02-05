@@ -7,21 +7,15 @@ graph = tf.Graph()
 with graph.as_default() :
     with tf.name_scope('Training_input') :
 
-        train_q = tf.RandomShuffleQueue(capacity = len(files_train), dtypes = [tf.string, tf.int32], min_after_dequeue = 25)
-        train_q.enqueue_many([files_train, y_train])
+        train_q = tf.train.slice_input_producer([files_train, y_train], shuffle = False)
 
-        X, y = train_q.dequeue()
-        y.set_shape([8])
-        img = tf.image.decode_jpeg(X, channels = 3)
-        img = tf.image.resize_images(img, size = [std_y, std_x])
-        img = tf.cast(img, tf.float32) * (1.0 / 255.0) - 0.5
+        train_label = train_q[1]
+        train_image = tf.read_file(train_q[0])
 
-        # TODO : insert function for distortion of image
+        img = tf.image.decode_jpeg(train_image, channels = 3)
+        img1 = tf.image.resize_images(img, size = [100,167])
 
 
-
-
-        training_data, training_labels = tf.train.batch([img, y], batch_size = batch_size, capacity = batch_size*2, shapes = [(std_y,std_x, 3), (8)])
 
     """
     with tf.name_scope('Valid_input') :
@@ -46,20 +40,7 @@ with graph.as_default() :
             sw5 = tf.summary.histogram('W_conv5', W_conv5)
             W_conv6 = tf.Variable(tf.truncated_normal([kernel_sizes[5], kernel_sizes[5], conv_depths[4], conv_depths[5]], stddev = stddev))
             sw6 = tf.summary.histogram('W_conv6', W_conv6)
-            """
-            W_conv7 = tf.Variable(tf.truncated_normal([kernel_sizes[6], kernel_sizes[6], conv_depths[5], conv_depths[6]], stddev = stddev))
-            sw7 = tf.summary.histogram('W_conv7', W_conv7)
-            W_conv8 = tf.Variable(tf.truncated_normal([kernel_sizes[7], kernel_sizes[7], conv_depths[6], conv_depths[7]], stddev = stddev))
-            sw8 =tf.summary.histogram('W_conv8', W_conv8)
-            W_conv9 = tf.Variable(tf.truncated_normal([kernel_sizes[8], kernel_sizes[8], conv_depths[7], conv_depths[8]], stddev = stddev))
-            sw9 = tf.summary.histogram('W_conv9', W_conv9)
-            W_conv10 = tf.Variable(tf.truncated_normal([kernel_sizes[9], kernel_sizes[9], conv_depths[8], conv_depths[9]], stddev = stddev))
-            sw10 = tf.summary.histogram('W_conv10', W_conv10)
-            W_conv11 = tf.Variable(tf.truncated_normal([kernel_sizes[10], kernel_sizes[10], conv_depths[9], conv_depths[10]], stddev = stddev))
-            sw11 = tf.summary.histogram('W_conv11', W_conv11)
-            W_conv12 = tf.Variable(tf.truncated_normal([kernel_sizes[11], kernel_sizes[11], conv_depths[10], conv_depths[11]], stddev = stddev))
-            sw12 = tf.summary.histogram('W_conv12', W_conv12)
-            """
+    """
 
         with tf.variable_scope('Fully_connected') :
             W_fc1 = tf.Variable(tf.truncated_normal(
@@ -120,13 +101,13 @@ with graph.as_default() :
         #learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = decay_rate, staircase = True)
         training_op = tf.train.AdagradOptimizer(init_rate).minimize(training_loss, global_step = steps)
 
-    """
+
     with tf.name_scope('Validation') :
         valid_logits = nn(valid_data, 1.0)
         valid_cross_entropy = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(valid_logits, valid_labels))
         valid_loss = valid_cross_entropy + regularize_weights()
 
-    """
+
 
     with tf.name_scope('Summaries') :
             training_acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(logits, 1), tf.argmax(training_labels,1)), tf.float32))
@@ -135,10 +116,10 @@ with graph.as_default() :
             sa = tf.summary.scalar('Training_Accuracy', training_acc)
             sl = tf.summary.scalar('Training_Loss', training_loss)
 
-            """
             valid_acc = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(valid_logits, 1), tf.argmax(valid_labels,1)), tf.float32))
             vc = tf.summary.scalar('Validation_Cross_entropy', valid_cross_entropy)
             va = tf.summary.scalar('Validation_Accuracy', valid_acc)
             vl = tf.summary.scalar('Validation_Loss', valid_loss)
-            """
+
             summaries = tf.summary.merge_all()
+    """

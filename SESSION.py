@@ -2,45 +2,39 @@
 
 
 with tf.Session(graph = graph) as session :
-    #Initialize session
-    writer = tf.summary.FileWriter(logs_path, graph = tf.get_default_graph())
-    #valid_writer = tf.summary.FileWriter(logs_path+'/test')
     tf.global_variables_initializer().run()
     print("Initialized!\n")
-
-    print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'".format(logs_path))
-
-
     coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(sess = session, coord = coord)
+    threads = tf.train.start_queue_runners(coord = coord)
 
-    try:
-        step = 0
-        while not coord.should_stop():
-            print(step)
-            # Run one step of the model.  The return values are
-            # the activations from the `train_op` (which is
-            # discarded) and the `loss` op.  To inspect the values
-            # of your ops or variables, you may include them in
-            # the list passed to sess.run() and the value tensors
-            # will be returned in the tuple from the call.
-            d, l = session.run([training_data, training_labels])
-            print(d.shape, l.shape)
-            step += 1
-    except tf.errors.OutOfRangeError:
-        print('Done training for %d steps.' % (step))
+    for i in range(10) :
+        example, lab = session.run([img1, train_label])
+        print(example.shape, lab)
 
-      # When done, ask the threads to stop.
     coord.request_stop()
-
-    # Wait for threads to finish.
     coord.join(threads)
 
 
 
 
 
+
+
+
+
+
+
+
     """
+    #Initialize session
+    writer = tf.summary.FileWriter(logs_path, graph = tf.get_default_graph())
+    #valid_writer = tf.summary.FileWriter(logs_path+'/test')
+    print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'".format(logs_path))
+
+
+
+
+
 
     print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'".format(logs_path))
     # NOTE : if y_valid.shape[0] is not divisible wholely by batch_size, then the final remainder examples in the validation set will never be used.
