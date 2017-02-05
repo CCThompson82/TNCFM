@@ -8,12 +8,9 @@ with graph.as_default() :
     with tf.name_scope('Training_input') :
 
         train_q = tf.train.slice_input_producer([files_train, y_train], shuffle = False)
-
         train_label = train_q[1]
-        train_image = tf.read_file(train_q[0])
+        train_image = fd.decode_image(tf.read_file(train_q[0]), size = [std_y, std_x], mutate = False)
 
-        train_img = tf.image.decode_jpeg(train_image, channels = num_channels)
-        train_img1 = tf.image.resize_images(train_img, size = [std_y, std_x])
 
 
 
@@ -21,9 +18,7 @@ with graph.as_default() :
     with tf.name_scope('Valid_input') :
         val_q = tf.train.slice_input_producer([files_val, y_val], shuffle = False)
         val_label = val_q[1]
-        val_image = tf.read_file(train_q[0])
-        val_img = tf.image.decode_jpeg(val_image, channels = num_channels)
-        val_img1 = tf.image.resize_images(val_img, size = [std_y, std_x])
+        val_image = fd.decode_image(tf.read_file(val_q[0]), size = [std_y, std_x], mutate = False)
 
 
 
@@ -45,7 +40,6 @@ with graph.as_default() :
             sw5 = tf.summary.histogram('W_conv5', W_conv5)
             W_conv6 = tf.Variable(tf.truncated_normal([kernel_sizes[5], kernel_sizes[5], conv_depths[4], conv_depths[5]], stddev = stddev))
             sw6 = tf.summary.histogram('W_conv6', W_conv6)
-    """
 
         with tf.variable_scope('Fully_connected') :
             W_fc1 = tf.Variable(tf.truncated_normal(
@@ -66,7 +60,7 @@ with graph.as_default() :
             b_softmax = tf.Variable(tf.zeros([num_labels]))
             sbsm = tf.summary.histogram('b_softmax', b_softmax)
 
-
+    """
     def nn(data, keep_prob_hidden) :
         with tf.name_scope('Convolution') :
             c1 = tf.nn.max_pool(tf.nn.relu(tf.nn.conv2d(data, filter = W_conv1, strides = [1, 3, 3, 1], padding = 'SAME')),ksize = [1,2,2,1], strides = [1,2,2,1], padding ='VALID')
