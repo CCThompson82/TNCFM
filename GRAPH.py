@@ -7,7 +7,7 @@ graph = tf.Graph()
 with graph.as_default() :
     with tf.name_scope('Training_input') :
 
-        train_q = tf.train.slice_input_producer([files_train, y_train], num_epochs = num_epochs, shuffle = False, capacity = len(files_train))
+        train_q = tf.train.slice_input_producer([files_train, y_train], shuffle = False, capacity = 75)
         train_label = train_q[1]
         train_image = fd.decode_image(tf.read_file(train_q[0]), size = [std_y, std_x], mutate = False)
 

@@ -9,18 +9,18 @@ with tf.Session(graph = graph) as session :
 
     writer = tf.summary.FileWriter(logs_path, graph = tf.get_default_graph())
     #valid_writer = tf.summary.FileWriter(logs_path+'/test')
-    print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'".format(logs_path))
+    print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'\n".format(logs_path))
 
     batch_num = 0
-    while coord.should_stop() == False :
+    while  batch_num < len(files_train*2):
         c, _ = session.run([train_cross_entropy, training_op])
-        batch_num += 1
-        if (i % 10) == 0 :
+        if (batch_num % 10) == 0 :
             summary, vce = session.run([summaries, validation_cross_entropy])
-            print("Batch number: {}".format(batch_num))
+            print("Batch number: {}".format(batch_num+1))
             print("     Training_mean_cross_entropy: {}".format(c))
             print("     Valid_mean_cross_entropy: {}".format(vce))
-            writer.add_summary(summary, i*batch_size)
+            writer.add_summary(summary, batch_num*batch_size)
+        batch_num += 1
     coord.request_stop()
     coord.join(threads)
 
