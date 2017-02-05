@@ -11,12 +11,14 @@ with tf.Session(graph = graph) as session :
     #valid_writer = tf.summary.FileWriter(logs_path+'/test')
     print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'".format(logs_path))
 
-    for i in range(100) :
-        a,b,c,_ = session.run([train_images, train_labels, train_cross_entropy, training_op])
-        #print(a.shape, b.shape)
-        print("Train_Mean_Cross_entropy: {}".format(c))
+    batch_num = 0
+    while coord.should_stop() == False :
+        c, _ = session.run([train_cross_entropy, training_op])
+        batch_num += 1
         if (i % 10) == 0 :
             summary, vce = session.run([summaries, validation_cross_entropy])
+            print("Batch number: {}".format(batch_num))
+            print("     Training_mean_cross_entropy: {}".format(c))
             print("     Valid_mean_cross_entropy: {}".format(vce))
             writer.add_summary(summary, i*batch_size)
     coord.request_stop()

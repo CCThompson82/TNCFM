@@ -7,13 +7,13 @@ graph = tf.Graph()
 with graph.as_default() :
     with tf.name_scope('Training_input') :
 
-        train_q = tf.train.slice_input_producer([files_train, y_train], shuffle = False)
+        train_q = tf.train.slice_input_producer([files_train, y_train], num_epochs = num_epochs, shuffle = False, capacity = len(files_train))
         train_label = train_q[1]
         train_image = fd.decode_image(tf.read_file(train_q[0]), size = [std_y, std_x], mutate = False)
 
         train_images, train_labels= tf.train.batch(
                                     [train_image, train_label],
-                                    batch_size=batch_size
+                                    batch_size=batch_size, capacity = batch_size *2
                                     #,num_threads=1
                                     )
     # Variables
@@ -127,12 +127,13 @@ with graph.as_default() :
 
     with tf.name_scope('Validation') :
         with tf.name_scope('Valid_input') :
-            val_q = tf.train.slice_input_producer([files_val, y_val], shuffle = False)
+            val_q = tf.train.slice_input_producer([files_val, y_val], shuffle = False, capacity = valid_size)
             val_label = val_q[1]
             val_image = fd.decode_image(tf.read_file(val_q[0]), size = [std_y, std_x], mutate = False)
             val_images, val_labels= tf.train.batch(
                                         [val_image, val_label],
-                                        batch_size=batch_size
+                                        batch_size=batch_size,
+                                        capacity = batch_size * 2
                                         #,num_threads=1
                                         )
         with tf.name_scope('Validation_Management') :
