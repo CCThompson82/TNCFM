@@ -11,6 +11,12 @@ with graph.as_default() :
         train_label = train_q[1]
         train_image = fd.decode_image(tf.read_file(train_q[0]), size = [std_y, std_x], mutate = False)
 
+        train_images, train_labels= tf.train.batch(
+                                    [train_image, train_label],
+                                    batch_size=batch_size
+                                    #,num_threads=1
+                                    )
+
 
 
 
@@ -19,6 +25,11 @@ with graph.as_default() :
         val_q = tf.train.slice_input_producer([files_val, y_val], shuffle = False)
         val_label = val_q[1]
         val_image = fd.decode_image(tf.read_file(val_q[0]), size = [std_y, std_x], mutate = False)
+        val_images, val_labels= tf.train.batch(
+                                    [val_image, val_label],
+                                    batch_size=batch_size
+                                    #,num_threads=1
+                                    )
 
 
 
