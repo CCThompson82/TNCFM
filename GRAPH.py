@@ -58,7 +58,7 @@ with graph.as_default() :
     def nn(data, keep_prob_hidden) :
         with tf.name_scope('Convolution') :
             c1 = tf.nn.max_pool(
-                    tf.nn.relu(
+                    tf.nn.elu(
                         tf.nn.conv2d(data, filter = W_conv1,
                             strides = [1, conv_strides[0],conv_strides[0], 1],
                             padding = 'SAME')),
@@ -141,7 +141,6 @@ with graph.as_default() :
             validation_logits, validation_labels = tf.train.batch(
                 [batch_valid_logits, val_labels], batch_size = valid_size,
                 enqueue_many = True, capacity = valid_size)
-
 
             validation_cross_entropy = tf.reduce_mean(
                                 tf.nn.softmax_cross_entropy_with_logits(validation_logits, validation_labels)
