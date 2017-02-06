@@ -7,13 +7,13 @@ graph = tf.Graph()
 with graph.as_default() :
     with tf.name_scope('Training_input') :
 
-        train_q = tf.train.slice_input_producer([files_train, y_train], shuffle = False, capacity = 75)
+        train_q = tf.train.slice_input_producer([files_train, y_train], shuffle = True, capacity = 100)
         train_label = train_q[1]
         train_image = fd.decode_image(tf.read_file(train_q[0]), size = [std_y, std_x], mutate = False)
 
         train_images, train_labels= tf.train.batch(
                                     [train_image, train_label],
-                                    batch_size=batch_size, capacity = batch_size *2
+                                    batch_size=batch_size, capacity = batch_size * 4
                                     #,num_threads=1
                                     )
     # Variables
@@ -97,7 +97,7 @@ with graph.as_default() :
         with tf.name_scope('Full_connections') :
             flatten = tf.nn.dropout(tf.contrib.layers.flatten(c6), keep_prob_hidden)
             fc1 = tf.nn.dropout(tf.nn.relu(tf.matmul(flatten, W_fc1) + b_fc1), keep_prob_hidden)
-            fc2 = tf.nn.dropout(tf.nn.relu(tf.matmul(fc1, W_fc2) +b_fc2), keep_prob_hidden)
+            fc2 = tf.nn.dropout(tf.nn.relu(tf.matmul(fc1, W_fc2) + b_fc2), keep_prob_hidden)
         with tf.name_scope('Softmax_Classification') :
             logits = tf.matmul(fc2, W_softmax) + b_softmax
 
