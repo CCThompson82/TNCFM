@@ -22,9 +22,9 @@ with graph.as_default() :
         with tf.name_scope('Batch_step') :
             steps = tf.Variable(0, trainable = False)
         with tf.variable_scope('Convolutions') :
-            W_conv1 = tf.Variable(tf.truncated_normal([kernel_sizes[0], kernel_sizes[0], num_channels, conv_depths[0]], stddev = stddev))
+            W_conv1 = tf.Variable(tf.truncated_normal([kernel_sizes[0], kernel_sizes[0], num_channels], stddev = stddev))
             sw1 = tf.summary.histogram('W_conv1', W_conv1)
-            W_conv2 = tf.Variable(tf.truncated_normal([kernel_sizes[1], kernel_sizes[1], conv_depths[0], conv_depths[1]], stddev = stddev))
+            W_conv2 = tf.Variable(tf.truncated_normal([kernel_sizes[1], kernel_sizes[1], num_channels, conv_depths[1]], stddev = stddev))
             sw2 = tf.summary.histogram('W_conv2', W_conv2)
             W_conv3 = tf.Variable(tf.truncated_normal([kernel_sizes[2], kernel_sizes[2], conv_depths[1], conv_depths[2]], stddev = stddev))
             sw3 = tf.summary.histogram('W_conv3', W_conv3)
@@ -59,13 +59,14 @@ with graph.as_default() :
         with tf.name_scope('Convolution') :
             c1 = tf.nn.max_pool(
                     tf.nn.elu(
-                        tf.nn.conv2d(data, filter = W_conv1,
+                        tf.nn.dilation2d(data, filter = W_conv1,
                             strides = [1, conv_strides[0],conv_strides[0], 1],
+                            rates = [1,2,2,1],
                             padding = 'SAME')),
                     ksize = [1,2,2,1], strides = [1,pool_strides[0], pool_strides[0],1],
                     padding ='VALID')
             c2 = tf.nn.max_pool(
-                    tf.nn.relu(
+                    tf.nn.elu(
                         tf.nn.conv2d(c1, filter = W_conv2,
                             strides = [1,conv_strides[1], conv_strides[1],1],
                             padding = 'SAME')),
@@ -178,5 +179,3 @@ with graph.as_default() :
         with tf.name_scope('Test_Management') :
             batch_test_logits = nn(test_images, 1.0)
             test_logits = tf.train.batch([batch_test_logits], batch_size = len(test_filenames), enqueue_many = True, capacity = len(test_filenames))
-
-            

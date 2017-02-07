@@ -14,7 +14,7 @@ with tf.Session(graph = graph) as session :
     batch_num = 0
     while  batch_num < ((len(files_train) // batch_size) * num_epochs) :
         c, _ = session.run([train_cross_entropy, training_op])
-        if (batch_num % 15) == 0 :
+        if (batch_num < 100 and ((batch_num % 4) == 0)) or ((batch_num % validate_interval) == 0) :  # run validation and summary writer every 4 batches in first 100, then decrease rate to the validate interval to preserve run time.  
             summary, vce = session.run([summaries, validation_cross_entropy])
             print("Batch number: {}".format(batch_num+1))
             print("     Training_mean_cross_entropy: {}".format(c))
