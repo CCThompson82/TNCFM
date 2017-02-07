@@ -14,7 +14,7 @@ with tf.Session(graph = graph) as session :
     batch_num = 0
     while  batch_num < ((len(files_train) // batch_size) * num_epochs) :
         c, _ = session.run([train_cross_entropy, training_op])
-        if (batch_num % 10) == 0 :
+        if (batch_num % 15) == 0 :
             summary, vce = session.run([summaries, validation_cross_entropy])
             print("Batch number: {}".format(batch_num+1))
             print("     Training_mean_cross_entropy: {}".format(c))
