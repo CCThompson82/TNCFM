@@ -122,8 +122,8 @@ with graph.as_default() :
     with tf.name_scope('BackProp') :
         train_cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, train_labels))
         training_loss = train_cross_entropy + regularize_weights()
-        #learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = decay_rate, staircase = True)
-        training_op = tf.train.AdagradOptimizer(init_rate).minimize(training_loss, global_step = steps)
+        learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = decay_rate, staircase = True)
+        training_op = tf.train.AdagradOptimizer(learning_rate).minimize(training_loss, global_step = steps)
 
 
     with tf.name_scope('Validation') :
@@ -167,6 +167,7 @@ with graph.as_default() :
             sa = tf.summary.scalar('Training_Accuracy', training_acc)
             vc = tf.summary.scalar('Validation_Cross_entropy', validation_cross_entropy)
             va = tf.summary.scalar('Validation_Accuracy', valid_acc)
+            lr = tf.summary.scalar('Learning_rate', learning_rate)
             summaries = tf.summary.merge_all()
 
 
