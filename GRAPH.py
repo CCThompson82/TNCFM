@@ -126,7 +126,7 @@ with graph.as_default() :
 
 
     with tf.name_scope('Validation') :
-        with tf.name_scope('Valid_input') :
+        with tf.name_scope('Validation_input') :
             val_q = tf.train.slice_input_producer([files_val, y_val], shuffle = False, capacity = valid_size)
             val_label = val_q[1]
             val_image = fd.decode_image(tf.read_file(val_q[0]), size = [std_y, std_x], mutate = False)
@@ -136,6 +136,7 @@ with graph.as_default() :
                                         capacity = batch_size * 2
                                         #,num_threads=1
                                         )
+
         with tf.name_scope('Validation_Management') :
             batch_valid_logits = nn(val_images, 1.0)
             validation_logits, validation_labels = tf.train.batch(
@@ -145,9 +146,6 @@ with graph.as_default() :
             validation_cross_entropy = tf.reduce_mean(
                                 tf.nn.softmax_cross_entropy_with_logits(validation_logits, validation_labels)
                                 )
-
-
-
 
     with tf.name_scope('Summaries') :
             training_acc = tf.reduce_mean(
@@ -169,3 +167,16 @@ with graph.as_default() :
             vc = tf.summary.scalar('Validation_Cross_entropy', validation_cross_entropy)
             va = tf.summary.scalar('Validation_Accuracy', valid_acc)
             summaries = tf.summary.merge_all()
+
+
+    with tf.name_scope('Test') :
+        with tf.name_scope('Test_set_input') :
+            test_q = tf.train.slice_input_producer([test_filenames], shuffle = False, capacity = len(test_filenames))
+            test_image = fd.decode_image(tf.read_file(test_q[0]), size = [std_y, std_x], mutate = False)
+            test_images = tf.train.batch([val_image], batch_size= batch_size, capacity = batch_size * 2)
+
+        with tf.name_scope('Test_Management') :
+            batch_test_logits = nn(test_images, 1.0)
+            test_logits = tf.train.batch([batch_test_logits], batch_size = len(test_filenames), enqueue_many = True, capacity = len(test_filenames))
+
+            

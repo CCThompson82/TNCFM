@@ -61,18 +61,21 @@ def decode_image(image_read, size, num_channels = 3,
     return img
 
 
-def generate_filenames_list() :
-    """Iterates through the 'data/train' folders of the working directory to
+def generate_filenames_list(subdirectory = 'data/train/', subfolders = True) :
+    """Iterates through the default 'data/train' folders of the working directory to
     generate a list of filenames"""
-    for i, species_ID in enumerate(os.listdir('data/train')[1:]) :
-        fish_file_names = []
-        fish_file_names = ['data/train/'+species_ID+'/'+x for x in os.listdir('data/train/'+species_ID) ]
-        fish_count = len(fish_file_names)
+    if subfolders :
+        for i, species_ID in enumerate(os.listdir(subdirectory)[1:]) :
+            fish_file_names = []
+            fish_file_names = [subdirectory+species_ID+'/'+x for x in os.listdir(subdirectory+'/'+species_ID) ]
+            fish_count = len(fish_file_names)
 
-        try :
-            master_file_names = master_file_names + fish_file_names
-        except :
-            master_file_names = fish_file_names
+            try :
+                master_file_names = master_file_names + fish_file_names
+            except :
+                master_file_names = fish_file_names
+    else :
+        master_file_names = os.listdir(subdirectory)
     return master_file_names
 
 

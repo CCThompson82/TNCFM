@@ -21,9 +21,22 @@ with tf.Session(graph = graph) as session :
             print("     Valid_mean_cross_entropy: {}".format(vce))
             writer.add_summary(summary, batch_num*batch_size)
         batch_num += 1
+
+    print("\nTRAINING FINISHED!\n\nRunning Test Predictions...")
+    test_scores = session.run(test_logits)
+    print("Test Predictions retrieved.")
+
     coord.request_stop()
     coord.join(threads)
+    print("\nCoordinator and Queue Runner Threads closed.")
 
+    # Fetched test_logits should be in the order of test_filenames.  Need to verify this, especially if results are not as expected.
+    test_df = test_df = pd.DataFrame(test_scores,
+                                        columns = ['ALB', 'BET', 'DOL', 'LAG', 'NoF', 'OTHER', 'SHARK', 'YFT'])
+    test_df = pd.concat([pd.Series(test_filenames, name = 'image'), test_df], axis = 1)
+    test_df.to_csv('Test_predictions/'+version_ID+'.csv', header=True, index = False)
+
+    print("Test set predictions csv file stored in 'Test_predictions' folder.  Submit file at:\n\n       https://www.kaggle.com/c/the-nature-conservancy-fisheries-monitoring/submit")
 
 
 
