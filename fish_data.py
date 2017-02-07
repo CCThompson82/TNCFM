@@ -75,7 +75,7 @@ def generate_filenames_list(subdirectory = 'data/train/', subfolders = True) :
             except :
                 master_file_names = fish_file_names
     else :
-        master_file_names = os.listdir(subdirectory)
+        master_file_names = [subdirectory+x for x in os.listdir(subdirectory)]
     return master_file_names
 
 
