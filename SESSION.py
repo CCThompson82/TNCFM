@@ -14,7 +14,7 @@ with tf.Session(graph = graph) as session :
     batch_num = 0
     while  batch_num < ((len(files_train) // batch_size) * num_epochs) :
         c, _ = session.run([train_cross_entropy, training_op])
-        if (batch_num < 100 and ((batch_num % 4) == 0)) or ((batch_num % validate_interval) == 0) :  # run validation and summary writer every 4 batches in first 100, then decrease rate to the validate interval to preserve run time.  
+        if (batch_num < 100 and ((batch_num % 4) == 0)) or ((batch_num % validate_interval) == 0) :  # run validation and summary writer every 4 batches in first 100, then decrease rate to the validate interval to preserve run time.
             summary, vce = session.run([summaries, validation_cross_entropy])
             print("Batch number: {}".format(batch_num+1))
             print("     Training_mean_cross_entropy: {}".format(c))
@@ -33,7 +33,7 @@ with tf.Session(graph = graph) as session :
     # Fetched test_logits should be in the order of test_filenames.  Need to verify this, especially if results are not as expected.
     test_df = test_df = pd.DataFrame(test_scores,
                                         columns = ['ALB', 'BET', 'DOL', 'LAG', 'NoF', 'OTHER', 'SHARK', 'YFT'])
-    test_df = pd.concat([pd.Series(test_filenames, name = 'image'), test_df], axis = 1)
+    test_df = pd.concat([pd.Series([ x[15:] for x in test_filenames], name = 'image'), test_df], axis = 1)
     test_df.to_csv('Test_predictions/'+version_ID+'.csv', header=True, index = False)
 
     print("Test set predictions csv file stored in 'Test_predictions' folder.  Submit file at:\n\n       https://www.kaggle.com/c/the-nature-conservancy-fisheries-monitoring/submit")
