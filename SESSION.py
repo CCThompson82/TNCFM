@@ -1,5 +1,6 @@
 """This is the session call associated with GRAPH.py"""
 
+logs_path = os.getcwd()+'/TB_logs/'+version_ID
 
 with tf.Session(graph = graph) as session :
     tf.global_variables_initializer().run()
