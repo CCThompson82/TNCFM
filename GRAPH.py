@@ -72,23 +72,23 @@ with graph.as_default() :
                             padding = 'SAME')),
                     ksize = [1,2,2,1], strides = [1,pool_strides[1],pool_strides[1],1],
                     padding = 'VALID')
-            c3 = tf.nn.relu(
+            c3 = tf.nn.relu6(
                     tf.nn.conv2d(c2, filter = W_conv3,
                         strides = [1,conv_strides[2], conv_strides[2],1],
                         padding = 'SAME'))
             c4 = tf.nn.max_pool(
-                    tf.nn.relu(
+                    tf.nn.relu6(
                         tf.nn.conv2d(c3, filter = W_conv4,
                             strides = [1,conv_strides[3], conv_strides[3],1],
                             padding = 'SAME')),
                     ksize = [1,2,2,1], strides = [1,pool_strides[2],pool_strides[2],1],
                     padding = 'VALID')
-            c5 = tf.nn.relu(
+            c5 = tf.nn.relu6(
                     tf.nn.conv2d(c4, filter = W_conv5,
                         strides = [1,conv_strides[4], conv_strides[4],1],
                         padding = 'SAME'))
             c6 = tf.nn.max_pool(
-                    tf.nn.relu(
+                    tf.nn.relu6(
                         tf.nn.conv2d(c5, filter = W_conv6,
                         strides = [1,conv_strides[5], conv_strides[5],1],
                         padding = 'SAME')),
