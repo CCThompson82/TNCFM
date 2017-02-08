@@ -98,42 +98,44 @@ def count_nodes(y_in, x_in, conv_depths, conv_strides, pool_strides ) :
 
     return y*x*conv_depths[-1]
 
-def decode_image(image_read, size, num_channels = 3,
-                                    mutate = False, brightness_delta = None,
-                                                    contrast_limits = None,
-                                                    hue_delta = None,
-                                                    saturation_limits = None ) :
+def decode_image(image_read, size, num_channels = 3, mean_channel_vals = [155.0, 155.0, 155.0], mutate = False, crop = 'random', crop_size = 224) :
     """Converts a dequeued image read from filename to a single tensor array,
     with modifications:
-        * resized to standard height and width supplied in size param
-        * normalized to mean near zero, min == -0.5, max ==  0.5
-        * distortions if mutate == True :
+        * smallest dimension resized to standard height and width supplied in size param
+        * each channel centered to mean near zero.  Deviation is not normalized.
+        * reflections if mutate == True :
             * random flip left right
             * random flip up down
-            * # TODO : random crop and resize to standard size ???
-            * random brightness
-            * random contrast
-            * random hue
-            * random saturation
+        *
 
     providing distortion if mutate == True"""
     assert (len(size) == 2), 'Size does not contain height and width values'
+    assert crop in ['random', 'centre', 'all'], "Crop must set to be 'random', 'centre', or 'all'"
+    #read image into memory
     img = tf.image.decode_jpeg(image_read, channels = num_channels )
-    img = tf.image.resize_images(img, size = size)
-    img = (tf.to_float(img) * (1.0 / 255.0)) - 0.5
+    #set smallest dimension (y) to size[0]
+    new_x = np.int(size[0] * y/x)
+    img = tf.image.resize_images(img, size = size[0], new_x)
+    img = tf.image.crop_to_bounding_box(img, offset_height = 0, offset_width = ((new_x - size[1]) // 2), target_height = size[0], target_width = size[1])
+    #crop based on parameter
+    if crop == 'random' :
+        h = np.random.randint(0,(size[0]-crop_size), 1)
+        w = np.random.randint(0,(size[1]-crop_size), 1)
+    elif crop == 'centre' :
+        h = (size[0] - crop_size) // 2
+        w = (size[1] - crop_size) // 2
+    elif crop == 'all' :
+        pass
+    else :
+        return "ERROR in image crop"
+    img = tf.crop_to_bounding_box(img, offset_height = h, offset_width = w, target_height = crop_size, target_width = crop_size)
+
+    # centre each color channel 
+    for c in range(3) :
+        img = tf.to_float(img)
+        img[:,:,c] = img[:,:,c] - mean_channel_vals[c]
 
     if mutate :
-        # TODO : set assertions based on delta performances in training later, can't have images unrecognizable, e.g.
-        """
-        assert  brightness_delta < 1, 'brightness_delta not in range [0,1)''
-        assert  contrast_delta < 1, 'contrast_delta is not in range [0,1)'
-        assert  hue_delta <= 0,5, 'hue_delta is not in range of [0,0.5]'
-        assert  saturation_delta, 'Saturation factor is not '
-        """
-        img = tf.image.random_brightness(img, max_delta = brightness_delta)
-        img = tf.image.random_contrast(img, lower = contrast_limits[0], upper = contrast_limits[1])
-        img = tf.image.random_hue(img, max_delta = hue_delta)
-        img = tf.image.random_saturation(img, lower = saturation_limits[0], upper = saturation_limits[1])
         img = tf.image.random_flip_left_right(img)
         img = tf.image.random_flip_up_down(img)
     return img
