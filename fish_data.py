@@ -92,11 +92,11 @@ def count_nodes(y_in, x_in, conv_depth, conv_stride, pool_stride ) :
     x = (x // conv_stride)
     if pool_stride is not None :
         y = (y // pool_stride)
-        x = (x // pool_stride) 
+        x = (x // pool_stride)
 
     return y,x,conv_depth, y*x*conv_depth
 
-def decode_image(image_read, size, num_channels = 3, mean_channel_vals = [155.0, 155.0, 155.0], mutate = False, crop = 'random', crop_size = 224) :
+def decode_image(image_name, size, num_channels = 3, mean_channel_vals = [155.0, 155.0, 155.0], mutate = False, crop = 'random', crop_size = 224) :
     """Converts a dequeued image read from filename to a single tensor array,
     with modifications:
         * smallest dimension resized to standard height and width supplied in size param
@@ -110,28 +110,30 @@ def decode_image(image_read, size, num_channels = 3, mean_channel_vals = [155.0,
     assert (len(size) == 2), 'Size does not contain height and width values'
     assert crop in ['random', 'centre', 'all'], "Crop must set to be 'random', 'centre', or 'all'"
     #read image into memory
-    img = tf.image.decode_jpeg(image_read, channels = num_channels )
+    img = tf.image.decode_jpeg(image_name, channels = num_channels )
+
+    # TODO : refactor this to maintain actual aspect ratio, not just maintain the average aspect ratio.  Could be done with tf.cond statements
+    new_x = np.int(size[1] * (1250 / 730))
     #set smallest dimension (y) to size[0]
-    new_x = np.int(size[0] * y/x)
     img = tf.image.resize_images(img, size = [size[0], new_x])
     img = tf.image.crop_to_bounding_box(img, offset_height = 0, offset_width = ((new_x - size[1]) // 2), target_height = size[0], target_width = size[1])
     #crop based on parameter
     if crop == 'random' :
-        h = np.random.randint(0,(size[0]-crop_size), 1)
-        w = np.random.randint(0,(size[1]-crop_size), 1)
+        h = np.random.randint(0,(size[0]-crop_size), 1).astype(np.int32)[0]
+        w = np.random.randint(0,(size[1]-crop_size), 1).astype(np.int32)[0]
     elif crop == 'centre' :
-        h = (size[0] - crop_size) // 2
-        w = (size[1] - crop_size) // 2
+        h = tf.to_int32((size[0] - crop_size) // 2)
+        w = tf.to_int32((size[1] - crop_size) // 2)
     elif crop == 'all' :
         pass
     else :
         return "ERROR in image crop"
-    img = tf.crop_to_bounding_box(img, offset_height = h, offset_width = w, target_height = crop_size, target_width = crop_size)
+    img = tf.image.crop_to_bounding_box(img, offset_height = h, offset_width = w, target_height = crop_size, target_width = crop_size)
 
     # centre each color channel
     for c in range(3) :
         img = tf.to_float(img)
-        img[:,:,c] = img[:,:,c] - mean_channel_vals[c]
+        img = tf.subtract(img, mean_channel_vals)
 
     if mutate :
         img = tf.image.random_flip_left_right(img)
