@@ -68,7 +68,7 @@ y,x,d,d6 = fd.count_nodes(y,x, kernel_sizes[4], conv_strides[4], conv_depths[4])
 y,x,d, d6p = fd.count_nodes(y,x, pool_kernels[2], pool_strides[2], conv_depths[4], pad='VALID')
 print("Dimensions after fifth convolution step (with max pool): {}x{}x{} = {}".format(y, x, d, d6p))
 
-nodes_exit_convolution = d6
+nodes_exit_convolution = d6p
 
 print("Dimensions after first connected layer: {}".format(fc1_depth))
 print("Dimensions after second connected layer: {}".format(fc2_depth))
