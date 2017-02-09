@@ -124,7 +124,6 @@ with graph.as_default() :
 
     with tf.name_scope('BackProp') :
         train_cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, train_labels))
-        training_loss = train_cross_entropy
 
         # TODO : momentum decay
 
@@ -165,12 +164,11 @@ with graph.as_default() :
                                     tf.argmax(validation_logits, 1), tf.argmax(validation_labels,1)),
                             tf.float32))
 
-            sc = tf.summary.scalar('Training_Cross_entropy', train_cross_entropy)
-            sl = tf.summary.scalar('Training_Loss', training_loss)
-            sa = tf.summary.scalar('Training_Accuracy', training_acc)
-            vc = tf.summary.scalar('Validation_Cross_entropy', validation_cross_entropy)
-            va = tf.summary.scalar('Validation_Accuracy', valid_acc)
-            lr = tf.summary.scalar('Learning_rate', learning_rate)
+            tf.summary.scalar('Training_Cross_entropy', train_cross_entropy)
+            tf.summary.scalar('Training_Accuracy', training_acc)
+            tf.summary.scalar('Validation_Cross_entropy', validation_cross_entropy)
+            tf.summary.scalar('Validation_Accuracy', valid_acc)
+            tf.summary.scalar('Learning_rate', learning_rate)
             summaries = tf.summary.merge_all()
 
 
