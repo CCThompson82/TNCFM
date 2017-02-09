@@ -82,19 +82,19 @@ def make_labels(filename_list, directory_string = 'train/', end_string = '/img')
 
     return label_arr
 
-def count_nodes(y_in, x_in, conv_depth, conv_stride, pool_stride ) :
+def count_nodes(x, y, kernel, stride, conv_depth, pad = 'SAME') :
     """Calculates the number of total nodes present in the next layer of a
-    convolution plus max_pooling architecture.  Calculations assume that
-    convolution is 'SAME' padded, and pooling is 'VALID' padded."""
-    y = y_in
-    x = x_in
-    y = (y // conv_stride)
-    x = (x // conv_stride)
-    if pool_stride is not None :
-        y = (y // pool_stride)
-        x = (x // pool_stride)
+    convolution OR max_pooling event."""
+    assert pad in ['SAME', 'VALID']
 
-    return y,x,conv_depth, y*x*conv_depth
+    if pad == 'SAME' :
+        pad = kernel // 2
+    else :
+        pad = 0
+    xp = (x - kernel + (2*pad)) // stride + 1
+    yp = (y - kernel + (2*pad)) // stride + 1
+
+    return xp, yp, conv_depth, xp*yp*conv_depth
 
 def decode_image(image_name, size, num_channels = 3, mean_channel_vals = [155.0, 155.0, 155.0], mutate = False, crop = 'random', crop_size = 224) :
     """Converts a dequeued image read from filename to a single tensor array,

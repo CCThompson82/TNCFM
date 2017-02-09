@@ -50,20 +50,23 @@ y, x = crop_size, crop_size
 d1 = y*x*num_channels
 print("Dimensions for each entry: {}x{}x{} = {}".format(y, x, num_channels, d1))
 
-y,x,d,d2 = fd.count_nodes(y, x, conv_depths[0], conv_strides[0], pool_strides[0])
-print("Dimensions after first convolution step (with max pool): {}x{}x{} = {}".format(y, x, d, d2))
+y,x,d,d2 = fd.count_nodes(y, x, kernel_sizes[0], conv_strides[0], conv_depths[0])
+y,x,d, d2p = fd.count_nodes(y,x, pool_kernels[0], pool_strides[0], conv_depths[0], pad='VALID')
+print("Dimensions after first convolution step (with max pool): {}x{}x{} = {}".format(y, x, d, d2p))
 
-y,x,d,d3 = fd.count_nodes(y,x, conv_depths[1], conv_strides[1], pool_strides[1])
-print("Dimensions after second convolution step (with max pool): {}x{}x{} = {}".format(y, x, d, d3))
+y,x,d,d3 = fd.count_nodes(y,x, kernel_sizes[1], conv_strides[1], conv_depths[1])
+y,x,d, d3p = fd.count_nodes(y,x, pool_kernels[1], pool_strides[1], conv_depths[1], pad='VALID')
+print("Dimensions after second convolution step (with max pool): {}x{}x{} = {}".format(y, x, d, d3p))
 
-y,x,d,d4 = fd.count_nodes(y,x, conv_depths[2], conv_strides[2], None)
+y,x,d,d4 = fd.count_nodes(y,x, kernel_sizes[2], conv_strides[2], conv_depths[2])
 print("Dimensions after third convolution step: {}x{}x{} = {}".format(y, x, d, d4))
 
-y,x,d,d5 = fd.count_nodes(y,x, conv_depths[3], conv_strides[3], None)
+y,x,d,d5 = fd.count_nodes(y,x, kernel_sizes[3], conv_strides[3], conv_depths[3])
 print("Dimensions after fourth convolution step: {}x{}x{} = {}".format(y, x, d, d5))
 
-y,x,d,d6 = fd.count_nodes(y,x, conv_depths[4], conv_strides[4], pool_strides[2])
-print("Dimensions after fifth convolution step (with max pool): {}x{}x{} = {}".format(y, x, d, d6))
+y,x,d,d6 = fd.count_nodes(y,x, kernel_sizes[4], conv_strides[4], conv_depths[4])
+y,x,d, d6p = fd.count_nodes(y,x, pool_kernels[2], pool_strides[2], conv_depths[4], pad='VALID')
+print("Dimensions after fifth convolution step (with max pool): {}x{}x{} = {}".format(y, x, d, d6p))
 
 nodes_exit_convolution = d6
 

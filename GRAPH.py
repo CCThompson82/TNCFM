@@ -49,7 +49,7 @@ with graph.as_default() :
 
         with tf.variable_scope('Fully_connected') :
             W_fc1 = tf.Variable(tf.truncated_normal(
-                            [9216, fc1_depth], # TODO : this line will certainly be wrong when code is run first time.  Fix count nodes to accomodate 
+                            [nodes_exit_convolution, fc1_depth], # from PARAMETERS.py
                             stddev = stddev ))
             tf.summary.histogram('W_fc1', W_fc1)
             b_fc1 = tf.Variable(tf.zeros([fc1_depth]))
@@ -115,7 +115,7 @@ with graph.as_default() :
             fc2 = tf.nn.dropout(tf.nn.relu(tf.matmul(fc1, W_fc2) + b_fc2), keep_prob_hidden)
         with tf.name_scope('Softmax_Classification') :
             logits = tf.matmul(fc2, W_softmax) + b_softmax
-
+        #print(c1, c2, c3, c4, c5, flatten, fc1, fc2, logits)
         return logits
 
 
