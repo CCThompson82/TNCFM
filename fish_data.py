@@ -82,40 +82,38 @@ def make_labels(filename_list, directory_string = 'train/', end_string = '/img')
 
     return label_arr
 
-def count_nodes(y_in, x_in, conv_depths, conv_strides, pool_strides ) :
-    """Calculates the number of total nodes present in the last layer of a
+def count_nodes(y_in, x_in, conv_depth, conv_stride, pool_stride ) :
+    """Calculates the number of total nodes present in the next layer of a
     convolution plus max_pooling architecture.  Calculations assume that
     convolution is 'SAME' padded, and pooling is 'VALID' padded."""
     y = y_in
     x = x_in
-    for i in range(len(conv_depths)) :
-        if conv_strides[i] > 1 :
-            y = (y // conv_strides[i]) + 1
-            x = (x // conv_strides[i]) + 1
-    for i in range(len(pool_strides)) :
-        y = (y // pool_strides[i])
-        x = (x // pool_strides[i])
+    y = (y // conv_stride)
+    x = (x // conv_stride)
+    if pool_stride is not None :
+        y = (y // pool_stride)
+        x = (x // pool_stride) 
 
-    return y*x*conv_depths[-1]
+    return y,x,conv_depth, y*x*conv_depth
 
 def decode_image(image_read, size, num_channels = 3, mean_channel_vals = [155.0, 155.0, 155.0], mutate = False, crop = 'random', crop_size = 224) :
     """Converts a dequeued image read from filename to a single tensor array,
     with modifications:
         * smallest dimension resized to standard height and width supplied in size param
         * each channel centered to mean near zero.  Deviation is not normalized.
-        * reflections if mutate == True :
+        * if mutate == True :
             * random flip left right
             * random flip up down
-        *
-
-    providing distortion if mutate == True"""
+            * TODO : random colour adjustment
+            * random crop from standard size to crop size (e.g. 256x256 to 224x224)
+    """
     assert (len(size) == 2), 'Size does not contain height and width values'
     assert crop in ['random', 'centre', 'all'], "Crop must set to be 'random', 'centre', or 'all'"
     #read image into memory
     img = tf.image.decode_jpeg(image_read, channels = num_channels )
     #set smallest dimension (y) to size[0]
     new_x = np.int(size[0] * y/x)
-    img = tf.image.resize_images(img, size = size[0], new_x)
+    img = tf.image.resize_images(img, size = [size[0], new_x])
     img = tf.image.crop_to_bounding_box(img, offset_height = 0, offset_width = ((new_x - size[1]) // 2), target_height = size[0], target_width = size[1])
     #crop based on parameter
     if crop == 'random' :
@@ -130,7 +128,7 @@ def decode_image(image_read, size, num_channels = 3, mean_channel_vals = [155.0,
         return "ERROR in image crop"
     img = tf.crop_to_bounding_box(img, offset_height = h, offset_width = w, target_height = crop_size, target_width = crop_size)
 
-    # centre each color channel 
+    # centre each color channel
     for c in range(3) :
         img = tf.to_float(img)
         img[:,:,c] = img[:,:,c] - mean_channel_vals[c]
