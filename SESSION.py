@@ -20,9 +20,9 @@ with tf.Session(graph = graph) as session :
             print("Batch number: {}".format(batch_num+1))
             print("     Training_mean_cross_entropy: {}".format(c))
             print("     Valid_mean_cross_entropy: {}".format(vce))
-            print(vl[15:17,:])
+            print(vl[22:27,0:5])
             writer.add_summary(summary, batch_num*batch_size)
-            
+
         batch_num += 1
 
     print("\nTRAINING FINISHED!\n\nRunning Test Predictions...")

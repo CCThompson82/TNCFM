@@ -128,7 +128,7 @@ with graph.as_default() :
         # TODO : momentum decay
 
         learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = decay_rate, staircase = False)
-        training_op = tf.train.AdamOptimizer().minimize(train_cross_entropy, global_step = steps)
+        training_op = tf.train.AdamOptimizer(learning_rate).minimize(train_cross_entropy, global_step = steps)
 
 
     with tf.name_scope('Validation') :
