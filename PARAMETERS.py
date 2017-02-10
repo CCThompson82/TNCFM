@@ -29,12 +29,9 @@ kp = 0.5
 fc1_depth = 4096
 fc2_depth = 2048
 
-#regularization
-beta = 1e-1
-
 # Learning rate
-init_rate = 1e-2
-per_steps = len(files_train)*10
+init_rate = 0.5
+per_steps = len(files_train)
 decay_rate = 0.1
 
 # Momentum

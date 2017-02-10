@@ -16,12 +16,13 @@ with tf.Session(graph = graph) as session :
     while  batch_num < ((len(files_train) // batch_size) * num_epochs) :
         c, _ = session.run([train_cross_entropy, training_op])
         if (batch_num < 100 and ((batch_num % 4) == 0)) or ((batch_num % validate_interval) == 0) :  # run validation and summary writer every 4 batches in first 100, then decrease rate to the validate interval to preserve run time.
-            summary, vce, vl = session.run([summaries, validation_cross_entropy, validation_logits])
+            summary, vce, vl, W = session.run([summaries, validation_cross_entropy, validation_logits, W_conv1])
             print("Batch number: {}".format(batch_num+1))
             print("     Training_mean_cross_entropy: {}".format(c))
             print("     Valid_mean_cross_entropy: {}".format(vce))
             print(vl[15:17,:])
             writer.add_summary(summary, batch_num*batch_size)
+            
         batch_num += 1
 
     print("\nTRAINING FINISHED!\n\nRunning Test Predictions...")
