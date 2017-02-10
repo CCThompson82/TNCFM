@@ -1,7 +1,7 @@
 """This is a file containing the parameters necessary for GRAPH.py and SESSION.py
 run for the Nature Conservancy Fisheries Kaggle Competition"""
 
-num_epochs = 30
+num_epochs = 2
 #Preprocessing
 std_sizes = [256, 256]
 crop_size = 224
@@ -30,9 +30,9 @@ fc1_depth = 4096
 fc2_depth = 2048
 
 # Learning rate
-init_rate = 0.5
-per_steps = len(files_train)
-decay_rate = 0.1
+init_rate = 5e-4
+per_steps = len(files_train)*2
+decay_rate = 0.2
 
 # Momentum
 momentum = 0.9
