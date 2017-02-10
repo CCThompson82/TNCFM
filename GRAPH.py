@@ -135,22 +135,12 @@ with graph.as_default() :
 
 
     with tf.name_scope('Validation') :
-        with tf.name_scope('Validation_input') :
-            val_q = tf.train.slice_input_producer([files_val, y_val], shuffle = False, capacity = valid_size)
-            val_label = val_q[1]
-            val_image = fd.decode_image(tf.read_file(val_q[0]), size = std_sizes, mutate = False, crop = 'centre', crop_size = crop_size)
-            val_images, val_labels= tf.train.batch(
-                                        [val_image, val_label],
-                                        batch_size=batch_size,
-                                        capacity = batch_size * 2)
+        validation_set = tf.constant(val_data)
+        validation_labels = tf.constant(val_labels)
 
-        with tf.name_scope('Validation_Management') :
-            batch_valid_logits = nn(val_images, 1.0)
-            validation_logits, validation_labels = tf.train.batch(
-                [batch_valid_logits, val_labels], batch_size = valid_size,
-                enqueue_many = True, capacity = valid_size)
+        validation_logits = nn(validation_set, 1.0)
 
-            validation_cross_entropy = tf.reduce_mean(
+        validation_cross_entropy = tf.reduce_mean(
                                 tf.nn.softmax_cross_entropy_with_logits(validation_logits, validation_labels)
                                 )
 
