@@ -132,7 +132,7 @@ def generate_balanced_filenames_epoch(f_list, labels, shuffle = True) :
     that each fish class is represented equally, along with corresponding one-hot
     labels for the list.
     """
-    assert len(list) == labels.shape[0]
+    assert len(f_list) == labels.shape[0]
     assert labels.shape[1] == 8
 
     #Count the number of images with each fish class using the labels
@@ -149,19 +149,21 @@ def generate_balanced_filenames_epoch(f_list, labels, shuffle = True) :
                 fish_list.append(f)
         master_list.append(fish_list)
 
+
     # Duplicate filenames as needed to balance the set
     new_master_list = []
     for fish_list in master_list :
-        scalar = len(fish_list) // mAx
-        remain = len(fish_list) % mAx
-        new_fish_list = fish_list * scalar + np.random.choice(fish_list, remain)
-        new_master_list += new_fish_list
+        scalar = mAx // len(fish_list)
+        remain = mAx % len(fish_list)
+        new_fish_list = fish_list * scalar + np.random.choice(fish_list, remain).tolist()
+        new_master_list = new_master_list + new_fish_list
 
     if shuffle :
         np.random.shuffle(new_master_list)
 
     # Generate labels for the new set
     new_labels = make_labels(new_master_list)
+    print("New fish counts: {}".format(np.sum(new_labels,0)))
 
     return new_master_list, new_labels
 
@@ -177,7 +179,7 @@ def process_batch(  f_list, labels, offset, batch_size,
     assert crop_mode in ['centre', 'random', 'many']
     if batch_size == 'all' :
         batch_size = len(f_list)
-    if offst is None :
+    if offset is None :
         offset = 0
 
     for i in range(offset, offset+batch_size) :
@@ -196,43 +198,43 @@ def process_batch(  f_list, labels, offset, batch_size,
             x_short = True
         #resize the short size the std_size
         if y_short == True :
-            img = mix.imresize(img, size = (std_size, std_size*(x//y), 3))
+            img = misc.imresize(img, size = (std_size, std_size*(x//y), 3))
         elif x_short == True :
             img = misc.imresize(img, size = (std_size*(y//x), std_size, 3))
-        print("Intermediate shape: {}".format(img.shape))
 
         #crop image to crop size
         y, x, d = img.shape
+
         if crop_mode == 'centre' :
-            y_off = (y-crop_size) // 2
+            y_off = (y - crop_size) // 2
             x_off = (x - crop_size) // 2
         elif crop_mode == 'random' :
-            y_off = np.random.randint(0,(y-crop_size),1)
-            x_off = np.random.randint(0, (x-crop_size), 1)
+            y_off = np.random.randint(0,(y-crop_size),1)[0]
+            x_off = np.random.randint(0, (x-crop_size), 1)[0]
+
         elif crop_mode == 'all' :
             pass
         else :
             return "ERROR in image crop"
-
-        img = img[ y_off:(y_off+crop_size), x_off:(x_off+crop_size), d ]
+        img = img[ y_off:(y_off+crop_size), x_off:(x_off+crop_size), : ]
 
         # centre pixel colours
-        img[:,:,0] = img.astype(np.float32) - pixel_offsets[0]
-        img[:,:,1] = img.astype(np.float32) - pixel_offsets[1]
-        img[:,:,2] = img.astype(np.float32) - pixel_offsets[2]
+        img[:,:,0] = img[:,:,0].astype(np.float32) - pixel_offsets[0]
+        img[:,:,1] = img[:,:,1].astype(np.float32) - pixel_offsets[1]
+        img[:,:,2] = img[:,:,2].astype(np.float32) - pixel_offsets[2]
 
         if mutation :
-            if np.random.int(0,2,1) == 1 :
+            if np.random.randint(0,2,1) == 1 :
                 img = np.fliplr(img)
-            if np.random.int(0,2,1) == 1 :
+            if np.random.randint(0,2,1) == 1 :
                 img = np.flipud(img)
-            if np.random.int(0,2,1) == 1 :
+            if np.random.randint(0,2,1) == 1 :
                 img = np.rot90(img)
 
         if i == offset : # trips on first iteration
             batch = np.expand_dims(img, 0)
-            batch_label = labels[[i], :]
+            batch_labels = labels[[i], :]
         else :
             batch = np.concatenate([batch, np.expand_dims(img, 0)], 0)
-            batch_label = np.concatenate([batch_label, labels[[i], :]])
+            batch_labels = np.concatenate([batch_labels, labels[[i], :]])
     return batch, batch_labels
