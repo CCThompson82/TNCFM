@@ -21,31 +21,31 @@ with graph.as_default() :
         with tf.name_scope('Batch_step') :
             steps = tf.Variable(0, trainable = False)
         with tf.name_scope('Label_weights') :
-            label_weights = tf.constant(np.sum(y_train,0))
+            label_weights = tf.constant(frequency_weights)
         with tf.variable_scope('Convolutions') :
             W_conv1 = tf.Variable(tf.truncated_normal([kernel_sizes[0], kernel_sizes[0], num_channels, conv_depths[0]], stddev = stddev))
             tf.summary.histogram('W_conv1', W_conv1)
-            b_conv1 = tf.Variable(tf.zeros([conv_depths[0]]))
+            b_conv1 = tf.Variable(tf.zeros([56, 56, conv_depths[0]]))
             tf.summary.histogram('b_conv1', b_conv1)
 
             W_conv2 = tf.Variable(tf.truncated_normal([kernel_sizes[1], kernel_sizes[1], conv_depths[0], conv_depths[1]], stddev = stddev))
             tf.summary.histogram('W_conv2', W_conv2)
-            b_conv2 = tf.Variable(tf.ones([conv_depths[1]]))
+            b_conv2 = tf.Variable(tf.ones([27,27, conv_depths[1]]))
             tf.summary.histogram('b_conv2', b_conv2)
 
             W_conv3 = tf.Variable(tf.truncated_normal([kernel_sizes[2], kernel_sizes[2], conv_depths[1], conv_depths[2]], stddev = stddev))
             tf.summary.histogram('W_conv3', W_conv3)
-            b_conv3 = tf.Variable(tf.zeros([conv_depths[2]]))
+            b_conv3 = tf.Variable(tf.zeros([13,13, conv_depths[2]]))
             tf.summary.histogram('b_conv3', b_conv3)
 
             W_conv4 = tf.Variable(tf.truncated_normal([kernel_sizes[3], kernel_sizes[3], conv_depths[2], conv_depths[3]], stddev = stddev))
             tf.summary.histogram('W_conv4', W_conv4)
-            b_conv4 = tf.Variable(tf.ones([conv_depths[3]]))
+            b_conv4 = tf.Variable(tf.ones([13,13, conv_depths[3]]))
             tf.summary.histogram('b_conv4', b_conv4)
 
             W_conv5 = tf.Variable(tf.truncated_normal([kernel_sizes[4], kernel_sizes[4], conv_depths[3], conv_depths[4]], stddev = stddev))
             tf.summary.histogram('W_conv5', W_conv5)
-            b_conv5 = tf.Variable(tf.ones([conv_depths[4]]))
+            b_conv5 = tf.Variable(tf.ones([13,13,conv_depths[4]]))
             tf.summary.histogram('b_conv5', b_conv5)
 
 
