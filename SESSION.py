@@ -20,7 +20,7 @@ with tf.Session(graph = graph) as session :
             print("Batch number: {}".format(batch_num+1))
             print("     Training_mean_cross_entropy: {}".format(c))
             print("     Valid_mean_cross_entropy: {}".format(vce))
-            print(vl[22:27,0:5])
+            print(vl[23:27,:])
             writer.add_summary(summary, batch_num*batch_size)
 
         batch_num += 1
