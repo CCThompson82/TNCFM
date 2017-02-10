@@ -36,34 +36,6 @@ def generate_filenames_list(subdirectory = 'data/train/', subfolders = True) :
         master_file_names = [subdirectory+x for x in os.listdir(subdirectory)]
     return master_file_names
 
-def generate_balanced_filenames_epoch(min_each, shuffle = True) :
-    """Function to generate a list of filenames to be used for each training epoch
-    with a corresponding label array.  Most file names will be used  multiple  times
-    in order that each fish is drawn into a training batch an equivalent number of
-    times."""
-    # Count the images in each set and append to a fish_list
-    for i, species_ID in enumerate(os.listdir('data/train')[1:]) :
-        fish_file_names = []
-        fish_file_names = ['data/train/'+species_ID+'/'+x for x in os.listdir('data/train/'+species_ID) ]
-        fish_count = len(fish_file_names)
-        assert min_each > fish_count, 'Listed minimum number of images is exceeded by the actual number of images.  Increase minimum number to generate a balanced dataset'
-        #tack on multiples of the original fish_file_names and then randomly select a handful of file names to fill out the remainder up to the min_each value
-        multiples = min_each // fish_count
-        remainder = min_each % fish_count
-        fish_file_names = (fish_file_names* multiples) + np.random.choice(fish_file_names, remainder).tolist()
-        print("'{}' set contains {} filenames from which to sample".format(species_ID, len(fish_file_names)))
-
-        #add to the master list / master array
-        try :
-            master_file_names = master_file_names + fish_file_names
-        except :
-            master_file_names = fish_file_names
-    print("{} filenames are in the training set list".format(len(master_file_names)))
-    t = master_file_names[0:5]
-    if shuffle :
-        np.random.shuffle(master_file_names)
-        print("Filename list is shuffled: {}".format(t != master_file_names[0:5]))
-    return master_file_names
 
 def make_labels(filename_list, directory_string = 'train/', end_string = '/img') :
     """Receives a list of filenames and returns an ordered one-hot label
@@ -152,3 +124,115 @@ def show_panel(image) :
     plt.subplot(2,2,4)
     plt.imshow(image)
     plt.show()
+
+
+def generate_balanced_filenames_epoch(f_list, labels, shuffle = True) :
+    """
+    Returns a shuffled list of filenames, of which some will be duplicates, such
+    that each fish class is represented equally, along with corresponding one-hot
+    labels for the list.
+    """
+    assert len(list) == labels.shape[0]
+    assert labels.shape[1] == 8
+
+    #Count the number of images with each fish class using the labels
+
+    print("Fish counts: {}".format(np.sum(labels, 0)))
+    mAx = np.max(np.sum(labels,0))
+
+    #Collect filenames based on fish class
+    master_list = []
+    for i in range(labels.shape[1]) :
+        fish_list = []
+        for ix, f in enumerate(f_list) :
+            if labels[ix, i] == 1 :
+                fish_list.append(f)
+        master_list.append(fish_list)
+
+    # Duplicate filenames as needed to balance the set
+    new_master_list = []
+    for fish_list in master_list :
+        scalar = len(fish_list) // mAx
+        remain = len(fish_list) % mAx
+        new_fish_list = fish_list * scalar + np.random.choice(fish_list, remain)
+        new_master_list += new_fish_list
+
+    if shuffle :
+        np.random.shuffle(new_master_list)
+
+    # Generate labels for the new set
+    new_labels = make_labels(new_master_list)
+
+    return new_master_list, new_labels
+
+
+
+def process_batch(  f_list, labels, offset, batch_size,
+                    std_size, crop_size, crop_mode = 'centre',
+                    pixel_offsets = [155.0, 155.0, 155.0], mutation = False) :
+    """
+    Fn preprocesses a batch of images and collects associated labels for input
+    into a tensorflow graph placeholder.
+    """
+    assert crop_mode in ['centre', 'random', 'many']
+    if batch_size == 'all' :
+        batch_size = len(f_list)
+    if offst is None :
+        offset = 0
+
+    for i in range(offset, offset+batch_size) :
+        #read image into environment
+        try :
+            img = misc.imread(f_list[i])
+        except :
+            i = i - len(f_list)
+            img = misc.imread(f_list[i])
+        #shape of img
+        y, x, d = img.shape
+        # determine short side
+        if y <= x :
+            y_short = True
+        else :
+            x_short = True
+        #resize the short size the std_size
+        if y_short == True :
+            img = mix.imresize(img, size = (std_size, std_size*(x//y), 3))
+        elif x_short == True :
+            img = misc.imresize(img, size = (std_size*(y//x), std_size, 3))
+        print("Intermediate shape: {}".format(img.shape))
+
+        #crop image to crop size
+        y, x, d = img.shape
+        if crop_mode == 'centre' :
+            y_off = (y-crop_size) // 2
+            x_off = (x - crop_size) // 2
+        elif crop_mode == 'random' :
+            y_off = np.random.randint(0,(y-crop_size),1)
+            x_off = np.random.randint(0, (x-crop_size), 1)
+        elif crop_mode == 'all' :
+            pass
+        else :
+            return "ERROR in image crop"
+
+        img = img[ y_off:(y_off+crop_size), x_off:(x_off+crop_size), d ]
+
+        # centre pixel colours
+        img[:,:,0] = img.astype(np.float32) - pixel_offsets[0]
+        img[:,:,1] = img.astype(np.float32) - pixel_offsets[1]
+        img[:,:,2] = img.astype(np.float32) - pixel_offsets[2]
+
+        if mutation :
+            if np.random.int(0,2,1) == 1 :
+                img = np.fliplr(img)
+            if np.random.int(0,2,1) == 1 :
+                img = np.flipud(img)
+            if np.random.int(0,2,1) == 1 :
+                img = np.rot90(img)
+
+        if i == offset : # trips on first iteration
+            batch = np.expand_dims(img, 0)
+            batch_label = labels[[i], :]
+        else :
+            batch = np.concatenate([batch, np.expand_dims(img, 0)], 0)
+            batch_label = np.concatenate([batch_label, labels[[i], :]])
+    return batch, batch_labels
