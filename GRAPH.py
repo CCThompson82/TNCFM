@@ -20,6 +20,8 @@ with graph.as_default() :
     with tf.variable_scope('Variables') :
         with tf.name_scope('Batch_step') :
             steps = tf.Variable(0, trainable = False)
+        with tf.name_scope('Label_weights') :
+            label_weights = tf.constant(np.sum(y_train,0))
         with tf.variable_scope('Convolutions') :
             W_conv1 = tf.Variable(tf.truncated_normal([kernel_sizes[0], kernel_sizes[0], num_channels, conv_depths[0]], stddev = stddev))
             tf.summary.histogram('W_conv1', W_conv1)
@@ -121,9 +123,10 @@ with graph.as_default() :
 
     with tf.name_scope('Training') :
         logits = nn(train_images, kp)
+        weighted_logits = tf.div(logits, label_weights)
 
     with tf.name_scope('BackProp') :
-        train_cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, train_labels))
+        train_cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(weighted_logits, train_labels))
 
         # TODO : momentum decay
 
