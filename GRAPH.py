@@ -5,32 +5,20 @@
 graph = tf.Graph()
 
 with graph.as_default() :
-    with tf.name_scope('Training_input') :
-
-        train_q = tf.train.slice_input_producer([files_train, y_train], shuffle = True, capacity = 100)
-        train_label = train_q[1]
-        train_image = fd.decode_image(tf.read_file(train_q[0]), size = std_sizes, mutate = True, crop = 'random', crop_size = crop_size)
-
-        train_images, train_labels= tf.train.batch(
-                                    [train_image, train_label],
-                                    batch_size=batch_size, capacity = batch_size * 4
-                                    )
     # Variables
-
     with tf.variable_scope('Variables') :
         with tf.name_scope('Batch_step') :
             steps = tf.Variable(0, trainable = False)
-        with tf.name_scope('Label_weights') :
-            label_weights = tf.constant(frequency_weights)
+
         with tf.variable_scope('Convolutions') :
             W_conv1 = tf.Variable(tf.truncated_normal([kernel_sizes[0], kernel_sizes[0], num_channels, conv_depths[0]], stddev = stddev))
             tf.summary.histogram('W_conv1', W_conv1)
-            b_conv1 = tf.Variable(tf.zeros([56, 56, conv_depths[0]]))
+            b_conv1 = tf.Variable(tf.zeros([56, 56, conv_depths[0]])) # experiment with this value
             tf.summary.histogram('b_conv1', b_conv1)
 
             W_conv2 = tf.Variable(tf.truncated_normal([kernel_sizes[1], kernel_sizes[1], conv_depths[0], conv_depths[1]], stddev = stddev))
             tf.summary.histogram('W_conv2', W_conv2)
-            b_conv2 = tf.Variable(tf.ones([27,27, conv_depths[1]]))
+            b_conv2 = tf.Variable(tf.zeros([27,27, conv_depths[1]]))
             tf.summary.histogram('b_conv2', b_conv2)
 
             W_conv3 = tf.Variable(tf.truncated_normal([kernel_sizes[2], kernel_sizes[2], conv_depths[1], conv_depths[2]], stddev = stddev))
@@ -40,12 +28,12 @@ with graph.as_default() :
 
             W_conv4 = tf.Variable(tf.truncated_normal([kernel_sizes[3], kernel_sizes[3], conv_depths[2], conv_depths[3]], stddev = stddev))
             tf.summary.histogram('W_conv4', W_conv4)
-            b_conv4 = tf.Variable(tf.ones([13,13, conv_depths[3]]))
+            b_conv4 = tf.Variable(tf.zeros([13,13, conv_depths[3]]))
             tf.summary.histogram('b_conv4', b_conv4)
 
             W_conv5 = tf.Variable(tf.truncated_normal([kernel_sizes[4], kernel_sizes[4], conv_depths[3], conv_depths[4]], stddev = stddev))
             tf.summary.histogram('W_conv5', W_conv5)
-            b_conv5 = tf.Variable(tf.ones([13,13,conv_depths[4]]))
+            b_conv5 = tf.Variable(tf.zeros([13,13,conv_depths[4]]))
             tf.summary.histogram('b_conv5', b_conv5)
 
 
@@ -71,25 +59,21 @@ with graph.as_default() :
 
     def nn(data, keep_prob_hidden) :
         with tf.name_scope('Convolution') :
-            # TODO : local_response_normalization of RELU layers
             c1 = tf.nn.max_pool(
-                    tf.nn.local_response_normalization(
-                        tf.nn.relu(
-                            tf.nn.conv2d(data, filter = W_conv1,
-                                strides = [1, conv_strides[0],conv_strides[0], 1],
-                                padding = 'SAME') +
-                            b_conv1),
-                        depth_radius = 5, bias = 2, alpha = 10e-4, beta = 0.75),
+                    tf.nn.relu(
+                        tf.nn.conv2d(data, filter = W_conv1,
+                            strides = [1, conv_strides[0],conv_strides[0], 1],
+                            padding = 'SAME') +
+                        b_conv1),
                     ksize = [1,pool_kernels[0],pool_kernels[0],1], strides = [1,pool_strides[0], pool_strides[0],1],
                     padding ='VALID')
+            tf.summary.scalar('Dead_nodes_C1', tf.reduce_mean(tf.cast(tf.equal(c1, 0), tf.float32)))
             c2 = tf.nn.max_pool(
-                    tf.nn.local_response_normalization(
-                        tf.nn.relu(
-                            tf.nn.conv2d(c1, filter = W_conv2,
-                                strides = [1,conv_strides[1], conv_strides[1],1],
-                                padding = 'SAME') +
-                            b_conv2),
-                        depth_radius = 5, bias = 2, alpha = 10e-4, beta = 0.75),
+                    tf.nn.relu(
+                        tf.nn.conv2d(c1, filter = W_conv2,
+                            strides = [1,conv_strides[1], conv_strides[1],1],
+                            padding = 'SAME') +
+                        b_conv2),
                     ksize = [1,pool_kernels[1],pool_kernels[1],1], strides = [1,pool_strides[1],pool_strides[1],1],
                     padding = 'VALID')
             c3 = tf.nn.relu(
@@ -122,20 +106,25 @@ with graph.as_default() :
 
 
     with tf.name_scope('Training') :
-        logits = nn(train_images, kp)
-        weighted_logits = tf.div(logits, label_weights)
+        with tf.name_scope('Training_input') :
+
+            train_images = tf.placeholder(dtype = tf.float32, shape = [batch_size,crop_size,crop_size,num_channels])
+            tf.summary.histogram('Scaled_images', train_images)
+            train_labels = tf.placeholder(dtype = tf.int32, shape = [batch_size,num_labels])
+        with tf.name_scope('Training_management') :
+            logits = nn(train_images, kp)
+            train_cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, train_labels))
 
     with tf.name_scope('BackProp') :
-        train_cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(weighted_logits, train_labels))
 
         # TODO : momentum decay
 
         learning_rate = tf.train.exponential_decay(init_rate, global_step = steps*batch_size, decay_steps = per_steps, decay_rate = decay_rate, staircase = False)
-        training_op = tf.train.AdamOptimizer(learning_rate).minimize(train_cross_entropy, global_step = steps)
+        training_op = tf.train.MomentumOptimizer(learning_rate, 0.9).minimize(train_cross_entropy, global_step = steps)
 
 
     with tf.name_scope('Validation') :
-        validation_set = tf.constant(val_data)
+        validation_set = tf.constant(val_data.astype(np.float32))
         validation_labels = tf.constant(val_labels)
 
         validation_logits = nn(validation_set, 1.0)
@@ -164,7 +153,7 @@ with graph.as_default() :
             tf.summary.scalar('Learning_rate', learning_rate)
             summaries = tf.summary.merge_all()
 
-
+    """
     with tf.name_scope('Test') :
         with tf.name_scope('Test_set_input') :
             test_q = tf.train.slice_input_producer([test_filenames], shuffle = False, capacity = len(test_filenames))
@@ -174,3 +163,4 @@ with graph.as_default() :
         with tf.name_scope('Test_Management') :
             batch_test_logits = nn(test_images, 1.0)
             test_logits = tf.nn.softmax(tf.train.batch([batch_test_logits], batch_size = len(test_filenames), enqueue_many = True, capacity = len(test_filenames)))
+    """

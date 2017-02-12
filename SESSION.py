@@ -13,16 +13,25 @@ with tf.Session(graph = graph) as session :
     print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'\n".format(logs_path))
 
     batch_num = 0
-    while  batch_num < ((len(files_train) // batch_size) * num_epochs) :
-        c, _ = session.run([train_cross_entropy, training_op])
-        if (batch_num < 100 and ((batch_num % 4) == 0)) or ((batch_num % validate_interval) == 0) :  # run validation and summary writer every 4 batches in first 100, then decrease rate to the validate interval to preserve run time.
-            summary, vce, vl, W = session.run([summaries, validation_cross_entropy, validation_logits, W_conv1])
-            print("Batch number: {}".format(batch_num+1))
-            print("     Training_mean_cross_entropy: {}".format(c))
-            print("     Valid_mean_cross_entropy: {}".format(vce))
-            print(vl[23:27,:])
-            writer.add_summary(summary, batch_num*batch_size)
+    batches_in_epoch = len(files_train) // batch_size
 
+    while  batch_num < (batches_in_epoch * num_epochs) :
+        offset = (batch_num*(batch_size)) - ((batch_num*batch_size // len(files_train)) * len(files_train))
+
+        X, y = fd.process_batch(files_train, y_train, offset, batch_size = batch_size, std_size = std_size,
+                                crop_size = crop_size, crop_mode = 'random', pixel_offsets = [96.482, 107.203,99.974], mutation = True)
+        feed_dict = { train_images : X , train_labels : y}
+
+        if (batch_num < 100 and ((batch_num % 2)==0)) or ((batch_num % validate_interval) == 0) :
+            _, summary, tce, vce, vlog, vlab, W1, W2 = session.run([training_op, summaries, train_cross_entropy, validation_cross_entropy, validation_logits, validation_labels, W_conv1, W_conv2], feed_dict = feed_dict)
+            print("Batch number: {}".format(batch_num+1))
+            print("     Training_mean_cross_entropy: {}".format(tce))
+            print("     Valid_mean_cross_entropy: {}".format(vce))
+            print(np.argmax(vlab[0:2,:],1),vlog[0:2,:])
+
+            writer.add_summary(summary, batch_num*batch_size)
+        else :
+            _ = session.run(training_op, feed_dict)
         batch_num += 1
 
     print("\nTRAINING FINISHED!\n\nRunning Test Predictions...")
