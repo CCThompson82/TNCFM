@@ -170,8 +170,8 @@ def generate_balanced_filenames_epoch(f_list, labels, shuffle = True) :
 
 
 def process_batch(  f_list, labels, offset, batch_size,
-                    std_size, crop_size, crop_mode = 'centre',
-                    pixel_offsets = [155.0, 155.0, 155.0], mutation = False) :
+                    std_size, crop_size, crop_mode = 'centre', normalize = 'default',
+                    pixel_offset = None, pixel_factor = None, mutation = False, verbose = False) :
     """
     Fn preprocesses a batch of images and collects associated labels for input
     into a tensorflow graph placeholder.
@@ -193,7 +193,7 @@ def process_batch(  f_list, labels, offset, batch_size,
                 cropped image.
         * 'centre' : the central most crop is made.
 
-    Pixel value normalization is under development.  
+    Pixel value normalization is under development.
 
     """
     assert crop_mode in ['centre', 'random', 'many']
@@ -238,17 +238,6 @@ def process_batch(  f_list, labels, offset, batch_size,
             return "ERROR in image crop"
         img = img[ y_off:(y_off+crop_size), x_off:(x_off+crop_size), : ]
 
-        # centre pixel colours
-        img = img.astype(np.float32)
-        img =  ((img - 155.0) / 155.0) + 0.33
-
-        """
-
-        img[:,:,0] = (img[:,:,0].astype(np.float32) - pixel_offsets[0]) / 255.0
-        img[:,:,1] = (img[:,:,1].astype(np.float32) - pixel_offsets[1]) / 255.0
-        img[:,:,2] = (img[:,:,2].astype(np.float32) - pixel_offsets[2]) / 255.0
-        """
-
         if mutation :
             if np.random.randint(0,2,1) == 1 :
                 img = np.fliplr(img)
@@ -262,4 +251,24 @@ def process_batch(  f_list, labels, offset, batch_size,
         except : # trips on first iteration of the batch
             batch = np.expand_dims(img, 0)
             batch_labels = labels[[i], :]
+
+    #pixel normalization
+    batch = batch.astype(np.float32)
+    if normalize == 'batch' :
+        pass
+        # TODO : sklearn standard scaler for this batch
+    elif normalize == 'custom' :
+        batch = (batch - pixel_offset) / pixel_factor
+    elif normalize == 'default' :
+        batch = (batch - 155.0) / 255.0
+    elif normalize == 'centre' :
+        batch = (batch - 155.0)
+    else :
+        pass
+
+    if verbose :
+        print("Batch shape: {}".format(batch.shape))
+        print("Mean pixel value: {0:.4} +/- {1:.3}".format(np.mean(batch), np.std(batch)))
+        print("Batch label counts: {}".format(np.sum(batch_labels, 0)))
+        print("Batch set is {} Mb".format(batch.nbytes/1000000))
     return batch, batch_labels
