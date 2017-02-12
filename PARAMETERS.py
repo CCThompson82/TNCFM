@@ -40,7 +40,8 @@ momentum = 0.9
 #momentum_decay = 0.9995
 
 # Report rate
-validate_interval = 20
+validate_interval = 25
+checkpoint_interval = 10000 // batch_size
 
 
 # Report for ipynb wrapper

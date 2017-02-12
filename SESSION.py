@@ -2,11 +2,11 @@
 
 logs_path = os.getcwd()+'/TB_logs/'+version_ID
 
+saver = tf.train.Saver()
 with tf.Session(graph = graph) as session :
     tf.global_variables_initializer().run()
     print("Initialized!\n")
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(coord = coord)
+
 
     writer = tf.summary.FileWriter(logs_path, graph = tf.get_default_graph())
     #valid_writer = tf.summary.FileWriter(logs_path+'/test')
@@ -22,89 +22,44 @@ with tf.Session(graph = graph) as session :
                                 crop_size = crop_size, crop_mode = 'random', pixel_offsets = [96.482, 107.203,99.974], mutation = True)
         feed_dict = { train_images : X , train_labels : y}
 
-        if (batch_num < 100 and ((batch_num % 2)==0)) or ((batch_num % validate_interval) == 0) :
-            _, summary, tce, vce, vlog, vlab, W1, W2 = session.run([training_op, summaries, train_cross_entropy, validation_cross_entropy, validation_logits, validation_labels, W_conv1, W_conv2], feed_dict = feed_dict)
-            print("Batch number: {}".format(batch_num+1))
-            print("     Training_mean_cross_entropy: {}".format(tce))
-            print("     Valid_mean_cross_entropy: {}".format(vce))
-            print(np.argmax(vlab[0:2,:],1),vlog[0:2,:])
+        if (batch_num % checkpoint_interval) == 0 :
+            _, summary, vlog, vlab = session.run([training_op, summaries, validation_logits, validation_labels], feed_dict = feed_dict)
 
+            saver.save(session, 'checkpoints/'+version_ID, global_step = batch_num * batch_size)
+            print("Model checkpoint created after {} images consumed".format(batch_num*batch_size))
+            print("Model can be restored from: \n\n{}\n".format('checkpoints/'+version_ID))
+
+            print(classification_report(np.argmax(vlab,1),np.argmax(vlog,1), target_names = ['ALB', 'BET', 'DOL', 'LAG', 'NoF', 'OTHER', 'SHARK', 'YFT'] ))
+
+        elif  batch_num < validate_interval :
+            _, summary = session.run([training_op, summaries], feed_dict = feed_dict)
             writer.add_summary(summary, batch_num*batch_size)
+
+        elif (batch_num % validate_interval) == 0 :
+            _, summary = session.run([training_op, summaries], feed_dict = feed_dict)
+            writer.add_summary(summary, batch_num*batch_size)
+
         else :
             _ = session.run(training_op, feed_dict)
         batch_num += 1
 
-    print("\nTRAINING FINISHED!\n\nRunning Test Predictions...")
-    test_scores = session.run(test_logits)
-    print("Test Predictions retrieved.")
+    print("\nTRAINING FINISHED!\n\nSaving final model...")
+    saver.save(session, 'FINAL_MODELS/'+version_ID)
 
-    coord.request_stop()
-    coord.join(threads)
-    print("\nCoordinator and Queue Runner Threads closed.")
+    for i in range(len(test_filenames)) :
+        X, _ = fd.process_batch(test_filenames, labels = None, offset = i, batch_size = 1, std_size = std_size, crop_size = crop_size, crop_mode = 'centre', normalize = 'custom', pixel_offset = 100.0, pixel_factor = 100.0, mutation = False, verbose = False)
 
-    # Fetched test_logits should be in the order of test_filenames.  Need to verify this, especially if results are not as expected.
-    test_df = test_df = pd.DataFrame(test_scores,
-                                        columns = ['ALB', 'BET', 'DOL', 'LAG', 'NoF', 'OTHER', 'SHARK', 'YFT'])
+        test_lgts = session.run(test_logits, {test_images : X})
+
+        try :
+            test_scores = np.concatenate([test_scores, test_lgts], 0)
+        except :
+            test_scores = test_lgts
+
+    test_df = pd.DataFrame(test_scores, columns = ['ALB', 'BET', 'DOL', 'LAG', 'NoF', 'OTHER', 'SHARK', 'YFT'])
     test_df = pd.concat([pd.Series([ x[15:] for x in test_filenames], name = 'image'), test_df], axis = 1)
     test_df.to_csv('Test_predictions/'+version_ID+'.csv', header=True, index = False)
 
-    print("Test set predictions csv file stored in 'Test_predictions' folder.  Submit file at:\n\n       https://www.kaggle.com/c/the-nature-conservancy-fisheries-monitoring/submit")
+    print("Test Predictions Stored at {}".format('Test_predictions/'+version_ID+'.csv'))
 
-
-
-
-
-
-
-
-
-
-
-    """
-
-    # NOTE : if y_valid.shape[0] is not divisible wholely by batch_size, then the final remainder examples in the validation set will never be used.
-    assert (y_valid.shape[0] % batch_size) == 0, 'Validation size is not wholely divisible by batch_size, please ammend to batch_size that is a factor of {}'.format(y_valid.shape[0])
-    non_record_counter = valid_every
-    record_counter = y_valid.shape[0] // batch_size # in order to iterate  through the whole validation set
-
-    record = True
-    for batch_number in range(int(num_epochs * len(X_filenames) // batch_size)) :
-        # Determine offset for training batch collection
-        offset = (batch_number * batch_size) - (len(X_filenames)*(batch_number * batch_size) // len(X_filenames))
-        # generate standardized training set
-
-        X_batch = fd.make_batch(X_filenames, offset, batch_size, std_y, std_x, mutate = True)
-        y_batch = fd.make_label(X_filenames, offset, batch_size)
-
-        if record == True :
-            v_offset = ((y_valid.shape[0] // batch_size) - record_counter) * batch_size
-
-            feed_dict= {    training_data : X_batch,
-                            training_labels : y_batch,
-                            valid_data : X_valid[v_offset:(v_offset+batch_size), :, :, :],
-                            valid_labels : y_valid[v_offset:(v_offset+batch_size), :] }
-
-            _, summary = session.run([training_op, summaries], feed_dict = feed_dict)
-            writer.add_summary(summary, batch_number*batch_size)
-            record_counter -= 1
-            if record_counter == 0 :
-                if batch_number > 10 * y_valid.shape[0] / batch_size :  # Measure the validation set 'X' times prior to allowing the record variable to be switched off.  After this, breaks in validation are given to save on the overall run time.  Should save time in knowing whether to kill a run or not
-                    record = False
-                record_counter = y_valid.shape[0] // batch_size # reset the counter
-
-        else :
-            feed_dict = {   training_data : X_batch,
-                            training_labels : y_batch }
-            _ = session.run(training_op, feed_dict = feed_dict)
-            non_record_counter -= 1
-            if non_record_counter == 0 :
-                record = True
-                non_record_counter = valid_every # reset the non_record_counter
-
-
-
-
-
-    print("\nFINISHED TRAINING!")
-
-"""
+    print("Submit file at:\n\n   https://www.kaggle.com/c/the-nature-conservancy-fisheries-monitoring/submit")

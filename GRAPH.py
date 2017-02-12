@@ -153,14 +153,10 @@ with graph.as_default() :
             tf.summary.scalar('Learning_rate', learning_rate)
             summaries = tf.summary.merge_all()
 
-    """
+
     with tf.name_scope('Test') :
         with tf.name_scope('Test_set_input') :
-            test_q = tf.train.slice_input_producer([test_filenames], shuffle = False, capacity = len(test_filenames))
-            test_image = fd.decode_image(tf.read_file(test_q[0]), size = std_sizes, mutate = False, crop = 'centre', crop_size = crop_size)
-            test_images = tf.train.batch([test_image], batch_size = batch_size, capacity = batch_size * 2)
+            test_images = tf.placeholder(dtype = tf.float32, shape = (1, crop_size,crop_size, num_channels))
 
         with tf.name_scope('Test_Management') :
-            batch_test_logits = nn(test_images, 1.0)
-            test_logits = tf.nn.softmax(tf.train.batch([batch_test_logits], batch_size = len(test_filenames), enqueue_many = True, capacity = len(test_filenames)))
-    """
+            test_logits = tf.nn.softmax(nn(test_images, 1.0))
