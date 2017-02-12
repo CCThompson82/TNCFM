@@ -114,14 +114,14 @@ def decode_image(image_name, size, num_channels = 3, mean_channel_vals = [155.0,
 
 def show_panel(image) :
     """Convenience function for showing an inline montage of the colour and merged channels"""
-    plt.figure(figsize=(10,30))
-    plt.subplot(2,2,1)
+    plt.figure(figsize=(16,8))
+    plt.subplot(1,4,1)
     plt.imshow(image[:,:,0], cmap = 'Reds')
-    plt.subplot(2,2,2)
+    plt.subplot(1,4,2)
     plt.imshow(image[:,:,1], cmap = 'Greens')
-    plt.subplot(2,2,3)
+    plt.subplot(1,4,3)
     plt.imshow(image[:,:,2], cmap = 'Blues')
-    plt.subplot(2,2,4)
+    plt.subplot(1,4,4)
     plt.imshow(image)
     plt.show()
 
