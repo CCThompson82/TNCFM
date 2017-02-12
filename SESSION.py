@@ -26,7 +26,7 @@ with tf.Session(graph = graph) as session :
 
         if (batch_num % checkpoint_interval) == 0 :
             _, summary, vlog, vlab = session.run([training_op, summaries, validation_logits, validation_labels], feed_dict = feed_dict)
-
+            writer.add_summary(summary, batch_num*batch_size)
             saver.save(session, 'model_checkpoints/'+version_ID, global_step = batch_num * batch_size)
             print("="*40)
             print("Model checkpoint created after {} images consumed".format((batch_num+1)*batch_size))
