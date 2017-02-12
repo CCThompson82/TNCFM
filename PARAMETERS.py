@@ -1,16 +1,16 @@
 """This is a file containing the parameters necessary for GRAPH.py and SESSION.py
 run for the Nature Conservancy Fisheries Kaggle Competition"""
 
-num_epochs = 10
+num_epochs = 50
 #Preprocessing
-std_sizes = [256, 256]
+std_size = 256
 crop_size = 224
 
 # General
 num_channels = 3
 num_labels = 8
-batch_size = 25
-stddev = 0.01
+batch_size = 50
+stddev = 0.04
 
 # convolution
 kernel_sizes = [11, 5, 3, 3, 3]
@@ -29,6 +29,7 @@ kp = 0.5
 fc1_depth = 4096
 fc2_depth = 2048
 
+
 # Learning rate
 init_rate = 1e-3
 per_steps = len(files_train)
@@ -39,7 +40,7 @@ momentum = 0.9
 #momentum_decay = 0.9995
 
 # Report rate
-validate_interval = 10
+validate_interval = 20
 
 
 # Report for ipynb wrapper
