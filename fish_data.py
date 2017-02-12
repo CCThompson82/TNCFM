@@ -184,11 +184,11 @@ def process_batch(  f_list, labels, offset, batch_size,
 
     for i in range(offset, offset+batch_size) :
         #read image into environment
-        try :
-            img = misc.imread(f_list[i])
-        except :
+        if i >= len(f_list) :
             i = i - len(f_list)
-            img = misc.imread(f_list[i])
+
+        img = misc.imread(f_list[i])
+
         #shape of img
         y, x, d = img.shape
         # determine short side
@@ -219,9 +219,15 @@ def process_batch(  f_list, labels, offset, batch_size,
         img = img[ y_off:(y_off+crop_size), x_off:(x_off+crop_size), : ]
 
         # centre pixel colours
-        img[:,:,0] = img[:,:,0].astype(np.float32) - pixel_offsets[0]
-        img[:,:,1] = img[:,:,1].astype(np.float32) - pixel_offsets[1]
-        img[:,:,2] = img[:,:,2].astype(np.float32) - pixel_offsets[2]
+        img = img.astype(np.float32)
+        img =  ((img - 155.0) / 155.0) + 0.33
+
+        """
+
+        img[:,:,0] = (img[:,:,0].astype(np.float32) - pixel_offsets[0]) / 255.0
+        img[:,:,1] = (img[:,:,1].astype(np.float32) - pixel_offsets[1]) / 255.0
+        img[:,:,2] = (img[:,:,2].astype(np.float32) - pixel_offsets[2]) / 255.0
+        """
 
         if mutation :
             if np.random.randint(0,2,1) == 1 :
@@ -230,11 +236,10 @@ def process_batch(  f_list, labels, offset, batch_size,
                 img = np.flipud(img)
             if np.random.randint(0,2,1) == 1 :
                 img = np.rot90(img)
-
-        if i == offset : # trips on first iteration
-            batch = np.expand_dims(img, 0)
-            batch_labels = labels[[i], :]
-        else :
+        try :
             batch = np.concatenate([batch, np.expand_dims(img, 0)], 0)
             batch_labels = np.concatenate([batch_labels, labels[[i], :]])
+        except : # trips on first iteration of the batch
+            batch = np.expand_dims(img, 0)
+            batch_labels = labels[[i], :]
     return batch, batch_labels
