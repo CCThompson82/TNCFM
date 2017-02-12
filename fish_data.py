@@ -175,6 +175,26 @@ def process_batch(  f_list, labels, offset, batch_size,
     """
     Fn preprocesses a batch of images and collects associated labels for input
     into a tensorflow graph placeholder.
+
+    If mutation == True, modifications to input images will be made, each with 0.5
+    probability:
+
+        * smallest dimension resized to standard height and width supplied in size param
+        * each channel centered to mean near zero.  Deviation is not normalized.
+        * if mutate == True :
+            * random flip left right
+            * random flip up down
+            * random rotation 90 degrees
+            * TODO : random colour adjustment
+
+    The crop mode can be set to 'random' or 'centre' (TODO : 'all').
+        * 'random' : crop from standard size to crop size (defaults: 256x256 to 224x224).
+                Crop can occur at any viable location that results in the full sized
+                cropped image.
+        * 'centre' : the central most crop is made.
+
+    Pixel value normalization is under development.  
+
     """
     assert crop_mode in ['centre', 'random', 'many']
     if batch_size == 'all' :
