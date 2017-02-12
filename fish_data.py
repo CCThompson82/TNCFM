@@ -197,6 +197,10 @@ def process_batch(  f_list, labels, offset, batch_size,
 
     """
     assert crop_mode in ['centre', 'random', 'many']
+    if labels is None :
+        labels = np.zeros([len(f_list), 8])
+
+
     if batch_size == 'all' :
         batch_size = len(f_list)
     if offset is None :
