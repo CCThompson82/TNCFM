@@ -67,7 +67,6 @@ with graph.as_default() :
                         b_conv1),
                     ksize = [1,pool_kernels[0],pool_kernels[0],1], strides = [1,pool_strides[0], pool_strides[0],1],
                     padding ='VALID')
-            tf.summary.scalar('Dead_nodes_C1', tf.reduce_mean(tf.cast(tf.equal(c1, 0), tf.float32)))
             c2 = tf.nn.max_pool(
                     tf.nn.relu(
                         tf.nn.conv2d(c1, filter = W_conv2,
@@ -94,6 +93,11 @@ with graph.as_default() :
                         b_conv5),
                     ksize = [1, pool_kernels[2], pool_kernels[2],1], strides = [1,pool_strides[2],pool_strides[2],1],
                     padding = 'VALID')
+            tf.summary.scalar('Dead_nodes_C1', tf.reduce_mean(tf.cast(tf.equal(c1, 0), tf.float32)))
+            tf.summary.scalar('Dead_nodes_C2', tf.reduce_mean(tf.cast(tf.equal(c2, 0), tf.float32)))
+            tf.summary.scalar('Dead_nodes_C3', tf.reduce_mean(tf.cast(tf.equal(c3, 0), tf.float32)))
+            tf.summary.scalar('Dead_nodes_C4', tf.reduce_mean(tf.cast(tf.equal(c4, 0), tf.float32)))
+            tf.summary.scalar('Dead_nodes_C5', tf.reduce_mean(tf.cast(tf.equal(c5, 0), tf.float32)))
 
         with tf.name_scope('Full_connections') :
             flatten = tf.contrib.layers.flatten(c5)

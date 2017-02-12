@@ -2,34 +2,38 @@
 
 logs_path = os.getcwd()+'/TB_logs/'+version_ID
 
-saver = tf.train.Saver()
 with tf.Session(graph = graph) as session :
     tf.global_variables_initializer().run()
-    print("Initialized!\n")
-
-
+    print("Weight and bias variables initialized!\n")
+    saver = tf.train.Saver()
+    print("Checkpoint saver initialized!\n")
     writer = tf.summary.FileWriter(logs_path, graph = tf.get_default_graph())
     #valid_writer = tf.summary.FileWriter(logs_path+'/test')
-    print("\nTo view your tensorboard dashboard summary, run the following on the command line:\ntensorboard --logdir='{}'\n".format(logs_path))
+    print("\nTensorboard initialized!\nTo view your tensorboard dashboard summary, run the following on the command line:\n\ntensorboard --logdir='{}'\n".format(logs_path))
 
+    print("Training model...\n")
     batch_num = 0
     batches_in_epoch = len(files_train) // batch_size
 
     while  batch_num < (batches_in_epoch * num_epochs) :
         offset = (batch_num*(batch_size)) - ((batch_num*batch_size // len(files_train)) * len(files_train))
 
-        X, y = fd.process_batch(files_train, y_train, offset, batch_size = batch_size, std_size = std_size,
-                                crop_size = crop_size, crop_mode = 'random', pixel_offsets = [96.482, 107.203,99.974], mutation = True)
+        X, y = fd.process_batch(files_train, y_train, offset = offset, batch_size = batch_size,
+                        std_size = std_size, crop_size = crop_size, crop_mode = 'random', normalize = 'custom',
+                        pixel_offset = 100.0, pixel_factor = 100.0,
+                        mutation = True, verbose = False)
         feed_dict = { train_images : X , train_labels : y}
 
         if (batch_num % checkpoint_interval) == 0 :
             _, summary, vlog, vlab = session.run([training_op, summaries, validation_logits, validation_labels], feed_dict = feed_dict)
 
-            saver.save(session, 'checkpoints/'+version_ID, global_step = batch_num * batch_size)
-            print("Model checkpoint created after {} images consumed".format(batch_num*batch_size))
-            print("Model can be restored from: \n\n{}\n".format('checkpoints/'+version_ID))
-
+            saver.save(session, 'model_checkpoints/'+version_ID, global_step = batch_num * batch_size)
+            print("="*40)
+            print("Model checkpoint created after {} images consumed".format((batch_num+1)*batch_size))
+            print("Model can be restored from: \n\n{}\n".format(os.getcwd()+'/model_checkpoints/'+version_ID))
+            print("Validation set classification report:")
             print(classification_report(np.argmax(vlab,1),np.argmax(vlog,1), target_names = ['ALB', 'BET', 'DOL', 'LAG', 'NoF', 'OTHER', 'SHARK', 'YFT'] ))
+            print("="*40)
 
         elif  batch_num < validate_interval :
             _, summary = session.run([training_op, summaries], feed_dict = feed_dict)
@@ -45,7 +49,7 @@ with tf.Session(graph = graph) as session :
 
     print("\nTRAINING FINISHED!\n\nSaving final model...")
     saver.save(session, 'FINAL_MODELS/'+version_ID)
-
+    print("Model saved!\n\nRunning Test set predictions...")
     for i in range(len(test_filenames)) :
         X, _ = fd.process_batch(test_filenames, labels = None, offset = i, batch_size = 1, std_size = std_size, crop_size = crop_size, crop_mode = 'centre', normalize = 'custom', pixel_offset = 100.0, pixel_factor = 100.0, mutation = False, verbose = False)
 

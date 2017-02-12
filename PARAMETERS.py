@@ -1,7 +1,7 @@
 """This is a file containing the parameters necessary for GRAPH.py and SESSION.py
 run for the Nature Conservancy Fisheries Kaggle Competition"""
 
-num_epochs = 50
+num_epochs = 0.005
 #Preprocessing
 std_size = 256
 crop_size = 224
@@ -40,7 +40,7 @@ momentum = 0.9
 #momentum_decay = 0.9995
 
 # Report rate
-validate_interval = 25
+validate_interval = 10
 checkpoint_interval = 10000 // batch_size
 
 
