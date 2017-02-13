@@ -1,7 +1,13 @@
 """This is a file containing the parameters necessary for GRAPH.py and SESSION.py
 run for the Nature Conservancy Fisheries Kaggle Competition"""
 
-num_epochs = 12
+num_epochs = 20
+
+#Normalization
+pixel_offset = 100.0
+pixel_factor = 100.0
+
+
 #Preprocessing
 std_size = 256
 crop_size = 224
