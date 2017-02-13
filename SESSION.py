@@ -20,7 +20,7 @@ with tf.Session(graph = graph) as session :
 
         X, y = fd.process_batch(files_train, y_train, offset = offset, batch_size = batch_size,
                         std_size = std_size, crop_size = crop_size, crop_mode = 'random', normalize = 'custom',
-                        pixel_offset = 100.0, pixel_factor = 100.0,
+                        pixel_offset = pixel_offset, pixel_factor = pixel_factor,
                         mutation = True, verbose = False)
         feed_dict = { train_images : X , train_labels : y}
 
@@ -51,7 +51,7 @@ with tf.Session(graph = graph) as session :
     saver.save(session, 'FINAL_MODELS/'+version_ID)
     print("Model saved!\n\nRunning Test set predictions...")
     for i in range(len(test_filenames)) :
-        X, _ = fd.process_batch(test_filenames, labels = None, offset = i, batch_size = 1, std_size = std_size, crop_size = crop_size, crop_mode = 'centre', normalize = 'custom', pixel_offset = 100.0, pixel_factor = 100.0, mutation = False, verbose = False)
+        X, _ = fd.process_batch(test_filenames, labels = None, offset = i, batch_size = 1, std_size = std_size, crop_size = crop_size, crop_mode = 'centre', normalize = 'custom', pixel_offset = pixel_offset, pixel_factor = pixel_factor, mutation = False, verbose = False)
 
         test_lgts = session.run(test_logits, {test_images : X})
 
