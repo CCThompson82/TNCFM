@@ -60,7 +60,7 @@ with graph.as_default() :
     def nn(data, keep_prob_hidden) :
         with tf.name_scope('Convolution') :
             c1 = tf.nn.max_pool(
-                    tf.nn.relu(
+                    tf.nn.elu(
                         tf.nn.conv2d(data, filter = W_conv1,
                             strides = [1, conv_strides[0],conv_strides[0], 1],
                             padding = 'SAME') +
@@ -86,7 +86,7 @@ with graph.as_default() :
                         padding = 'SAME') +
                     b_conv4)
             c5 = tf.nn.max_pool(
-                    tf.nn.relu(
+                    tf.nn.elu(
                         tf.nn.conv2d(c4, filter = W_conv5,
                             strides = [1,conv_strides[4], conv_strides[4],1],
                             padding = 'SAME') +
