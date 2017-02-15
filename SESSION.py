@@ -3,16 +3,28 @@
 logs_path = os.getcwd()+'/TB_logs/'+version_ID
 
 with tf.Session(graph = graph) as session :
-    tf.global_variables_initializer().run()
-    print("Weight and bias variables initialized!\n")
+    if restore_model == False :
+        tf.global_variables_initializer().run()
+        print("Weight and bias variables initialized!\n")
+        batch_num = 0
+
+    elif restore_model == True :
+        restorer = tf.train.Saver()
+        print("Restorer initialized!")
+        restorer.restore(session, tf.train.latest_checkpoint(directory))
+        print("Weights and biases retrieved from {} in {}\n".format(last_version, directory))
+        batch_num = new_batch_num
+        num_epochs = new_num_epochs
+
+
     saver = tf.train.Saver()
     print("Checkpoint saver initialized!\n")
     writer = tf.summary.FileWriter(logs_path, graph = tf.get_default_graph())
-    #valid_writer = tf.summary.FileWriter(logs_path+'/test')
-    print("\nTensorboard initialized!\nTo view your tensorboard dashboard summary, run the following on the command line:\n\ntensorboard --logdir='{}'\n".format(logs_path))
+
+    print("Tensorboard initialized!\nTo view your tensorboard dashboard summary, run the following on the command line:\n\ntensorboard --logdir='{}'\n".format(logs_path))
 
     print("Training model...\n")
-    batch_num = 0
+
     batches_in_epoch = len(files_train) // batch_size
 
     while  batch_num < (batches_in_epoch * num_epochs) :
