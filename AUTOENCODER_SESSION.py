@@ -26,10 +26,9 @@ with tf.Session(graph = graph) as session :
     print("Training model...\n")
 
     epoch = 0
-    step = 0
-    epoch_list = fish_filenames
+    epoch_list = fish_filenames.copy()
+    image_count = 0
     while epoch <= num_epochs :
-        step += 1
         batch_img_foveas = None
         for _ in range(5) :
             handle = epoch_list.pop(np.random.randint(0,len(epoch_list),1)[0])
@@ -47,17 +46,18 @@ with tf.Session(graph = graph) as session :
                 batch_img_foveas = np.concatenate([batch_img_foveas, image_foveas], 0)
             except :
                 batch_img_foveas = image_foveas
+            image_count += 1
         batch_img_foveas =( batch_img_foveas / 255.0) - 0.5
 
         feed_dict = {batch_fovea : batch_img_foveas}
         _, summary = session.run([train_op, summaries], feed_dict = feed_dict)
-        writer.add_summary(summary, step)
+        writer.add_summary(summary, image_count)
 
         if len(epoch_list) < 5 :  # match the batch range above
             epoch_list = epoch_list + fish_filenames # re-stock epoch list
             epoch += 1
             print("Epoch {} finished!".format(epoch))
-            saver.save(session, 'model_checkpoints/'+version_ID, global_step = step)
+            saver.save(session, 'model_checkpoints/'+version_ID, global_step = image_count)
 
     print("\nTRAINING FINISHED!\n\nSaving final model...")
     saver.save(session, 'FINAL_MODELS/'+version_ID)

@@ -8,13 +8,13 @@ with graph.as_default() :
     with tf.variable_scope('Variables') :
 
         with tf.variable_scope('Convolutions') :
-            W_conv1 = tf.Variable(tf.truncated_normal([4, 4, num_channels, 96], stddev = stddev))
+            W_conv1 = tf.Variable(tf.truncated_normal([4, 4, num_channels, 32], stddev = stddev))
             tf.summary.histogram('W_conv1', W_conv1)
-            b_conv1 = tf.Variable(tf.zeros([conv_depths[0]])) # experiment with this value
+            b_conv1 = tf.Variable(tf.zeros([32])) # experiment with this value
             tf.summary.histogram('b_conv1', b_conv1)
 
         with tf.variable_scope('Transpose_Convolution') :
-            W_deconv1 = tf.Variable(tf.truncated_normal([4,4,num_channels, 96], stddev = stddev))
+            W_deconv1 = tf.Variable(tf.truncated_normal([4,4,num_channels, 32], stddev = stddev))
             tf.summary.histogram('W_deconv1', W_deconv1)
             b_deconv1 = tf.Variable(tf.zeros([3]))
             tf.summary.histogram('b_deconv1', b_deconv1)
@@ -49,12 +49,14 @@ with graph.as_default() :
 
 
     with tf.name_scope('Training') :
-        loss = tf.contrib.losses.mean_squared_error(predictions= decoded, labels = batch_fovea)
-        cost = tf.reduce_sum(loss) + (beta*tf.nn.l2_loss(encoded))
-
-        train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost)
+        mse = tf.contrib.losses.mean_squared_error(predictions= decoded, labels = batch_fovea)
+        cost = (beta*tf.nn.l2_loss(encoded))
+        loss = mse + cost
+        train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
 
     with tf.name_scope('Summaries') :
+        tf.summary.histogram('encoded', encoded)
+        tf.summary.scalar('mse', mse)
         tf.summary.scalar('loss', tf.reduce_sum(loss))
         tf.summary.scalar('cost', cost)
         summaries = tf.summary.merge_all()
