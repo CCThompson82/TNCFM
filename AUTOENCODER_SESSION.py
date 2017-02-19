@@ -28,7 +28,7 @@ with tf.Session(graph = graph) as session :
     epoch = 0
     epoch_list = fish_filenames.copy()
     image_count = 0
-    while epoch <= num_epochs :
+    while epoch < num_epochs :
         batch_img_foveas = None
         for _ in range(5) :
             handle = epoch_list.pop(np.random.randint(0,len(epoch_list),1)[0])
@@ -47,11 +47,22 @@ with tf.Session(graph = graph) as session :
             except :
                 batch_img_foveas = image_foveas
             image_count += 1
-        batch_img_foveas =( batch_img_foveas / 255.0) - 0.5
+        batch_img_foveas =( batch_img_foveas / 255.0) # do not centre at mean zero.  range from 0 to 1 to match with sigmoid activation
 
         feed_dict = {batch_fovea : batch_img_foveas}
-        _, summary = session.run([train_op, summaries], feed_dict = feed_dict)
-        writer.add_summary(summary, image_count)
+
+        if (image_count % 500 )== 0 :  #multiple of batch_range above
+            _, summary, I, O = session.run([train_op, summaries,batch_fovea, decoded], feed_dict = feed_dict)
+            I = I[4,:,:,:]
+            O = O[4,:,:,:]
+            I = (I) * 255.0
+            O = (O) * 255.0
+            fd.show_panel(I)
+            fd.show_panel(O)
+            writer.add_summary(summary, image_count)
+        else :
+            _, summary = session.run([train_op, summaries], feed_dict = feed_dict)
+            writer.add_summary(summary, image_count)
 
         if len(epoch_list) < 5 :  # match the batch range above
             epoch_list = epoch_list + fish_filenames # re-stock epoch list
