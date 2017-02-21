@@ -9,6 +9,7 @@ Dependencies:
     * scipy.special as special
     * matplotlib.pyplot as plt
     * tensorflow as tf
+    * pickle 
 
 """
 
@@ -18,6 +19,7 @@ import os
 from scipy import ndimage, misc, special
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import pickle
 
 def generate_filenames_list(subdirectory = 'data/train/', subfolders = True) :
     """Iterates through the default 'data/train' folders of the working directory to
@@ -54,26 +56,30 @@ def make_labels(filename_list, directory_string = 'train/', end_string = '/img')
 
     return label_arr
 
-def make_coordinates_dict(filename_list = fish_filenames, resize_val = 1.0, presize = 256, bins = (4, 3), force = False) :
+def make_coordinates_dict(filename_list, resize_val = 1.0, presize = 256, bins = (4, 3), force = False, store = False) :
     """
     Utilizes a nested dictionary to crop images into multiple fovea for generation of a naive (i.e. unlabeled)
-    image set.  Depends on fish_data::make_labels().
+    image set.
 
     """
     try :
+        print("Attempting to load dictionary pickle...")
         with open('coordinates_dictionary.pickle', 'rb') as handle:
             master_dict = pickle.load(handle)
+        print("Dictionary loaded...")
     except :
+        print("Not able to load dictionary!")
         force = True
 
     if force :
+        print("Generating coordinates...")
         assert len(bins) == 2, "bins needs y and x dimension"
         assert 0 < resize_val <= 1.0, "resize_val is not a float between 0 and 1"
 
         master_dict = {}
         for f in filename_list :
              # TODO : assert fd.make_labels receives a list in fish_data.py
-            img_dict = {f: {'label': fd.make_labels([f])}}
+            img_dict = {f: {'label': make_labels([f])}}
 
             img = misc.imresize(misc.imread(f, mode = 'RGB'), size = resize_val)
             y, x, _ = img.shape
@@ -102,9 +108,10 @@ def make_coordinates_dict(filename_list = fish_filenames, resize_val = 1.0, pres
             img_dict[f]['fovea_offsets'] = coord_list
 
             master_dict.update(img_dict)
-            
-        with open('coordinates_dictionary.pickle', 'wb') as fp:
-            pickle.dump(master_dict, fp)
+
+        if store :
+            with open('coordinates_dictionary.pickle', 'wb') as fp:
+                pickle.dump(master_dict, fp)
 
     return master_dict
 
