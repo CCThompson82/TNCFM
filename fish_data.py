@@ -54,6 +54,60 @@ def make_labels(filename_list, directory_string = 'train/', end_string = '/img')
 
     return label_arr
 
+def make_coordinates_dict(filename_list = fish_filenames, resize_val = 1.0, presize = 256, bins = (4, 3), force = False) :
+    """
+    Utilizes a nested dictionary to crop images into multiple fovea for generation of a naive (i.e. unlabeled)
+    image set.  Depends on fish_data::make_labels().
+
+    """
+    try :
+        with open('coordinates_dictionary.pickle', 'rb') as handle:
+            master_dict = pickle.load(handle)
+    except :
+        force = True
+
+    if force :
+        assert len(bins) == 2, "bins needs y and x dimension"
+        assert 0 < resize_val <= 1.0, "resize_val is not a float between 0 and 1"
+
+        master_dict = {}
+        for f in filename_list :
+             # TODO : assert fd.make_labels receives a list in fish_data.py
+            img_dict = {f: {'label': fd.make_labels([f])}}
+
+            img = misc.imresize(misc.imread(f, mode = 'RGB'), size = resize_val)
+            y, x, _ = img.shape
+
+            max_y = y - presize
+            max_x = x - presize
+
+            stride_y = (y // bins[0]) - ((presize - (y // bins[0])) // (bins[0]-1))
+            stride_x = (x // bins[1]) -  ((presize - (x // bins[1])) // (bins[1]-1))
+
+            v = 0
+            coord_list = []
+            for _ in range(bins[0]) :
+                h = 0
+                for _ in range(bins[1]) :
+                    #hack to avoid overshooting the end of the image by a single pixel
+                    while h+presize > x :
+                        h -= 1
+                    while v+presize > y :
+                        v -= 1
+                    coord_list.append((v, h))
+                    h += stride_x
+                v += stride_y
+
+            img_dict[f]['parameters'] = {'prescaled' : resize_val, 'pixel_dims' : presize}
+            img_dict[f]['fovea_offsets'] = coord_list
+
+            master_dict.update(img_dict)
+            
+        with open('coordinates_dictionary.pickle', 'wb') as fp:
+            pickle.dump(master_dict, fp)
+
+    return master_dict
+
 def count_nodes(x, y, kernel, stride, conv_depth, pad = 'SAME') :
     """Calculates the number of total nodes present in the next layer of a
     convolution OR max_pooling event."""
