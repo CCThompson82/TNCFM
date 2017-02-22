@@ -8,38 +8,39 @@ with graph.as_default() :
     with tf.variable_scope('Variables') :
 
         with tf.variable_scope('Convolutions') :
-            W_conv1 = tf.Variable(tf.truncated_normal([4, 4, num_channels, 32], stddev = stddev))
+            W_conv1 = tf.Variable(tf.truncated_normal([11, 11, num_channels, 64], stddev = stddev))
             tf.summary.histogram('W_conv1', W_conv1)
-            b_conv1 = tf.Variable(tf.zeros([32])) # experiment with this value
+            b_conv1 = tf.Variable(tf.zeros([64])) # experiment with this value
             tf.summary.histogram('b_conv1', b_conv1)
 
         with tf.variable_scope('Transpose_Convolution') :
-            W_deconv1 = tf.Variable(tf.truncated_normal([4,4,num_channels, 32], stddev = stddev))
+            W_deconv1 = tf.Variable(tf.truncated_normal([4, 4, num_channels, 64], stddev = stddev))
             tf.summary.histogram('W_deconv1', W_deconv1)
-            b_deconv1 = tf.Variable(tf.zeros([3]))
+            b_deconv1 = tf.Variable(tf.zeros([num_channels]))
             tf.summary.histogram('b_deconv1', b_deconv1)
 
 
     def encoder(data) :
         with tf.name_scope('Encoder') :
-            e1 = tf.sigmoid(
-                        tf.nn.conv2d(data, filter = W_conv1,
-                            strides = [1, 2,2, 1],
-                            padding = 'SAME') +
-                        b_conv1)
+            e1 =  tf.nn.conv2d(data, filter = W_conv1,
+                            strides = [1, 4, 4, 1],
+                            padding = 'SAME') + b_conv1
         return e1
 
     def decoder(data) :
         with tf.name_scope('Decoder') :
-            d1 =    tf.nn.conv2d_transpose(
+            d1 = tf.sigmoid(
+                    tf.nn.conv2d_transpose(
                         data,
                         filter = W_deconv1,
                         output_shape = [batch_size, fovea_size, fovea_size, num_channels],
-                        strides = [1,2,2,1],
-                        padding = 'SAME') + b_deconv1
+                        strides = [1,4,4,1],
+                        padding = 'SAME')
+                    + b_deconv1)
         return d1
 
     with tf.name_scope('Input_fovea') :
+        alpha = tf.placeholder(tf.float32, shape = ())
         batch_fovea = tf.placeholder(tf.float32, shape = [batch_size, fovea_size, fovea_size, num_channels])
 
     with tf.name_scope('Encoding') :
@@ -49,14 +50,41 @@ with graph.as_default() :
 
 
     with tf.name_scope('Training') :
-        mse = tf.contrib.losses.mean_squared_error(predictions= decoded, labels = batch_fovea)
-        cost = (beta*tf.nn.l2_loss(encoded))
-        loss = mse + cost
-        train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
+        logloss = tf.contrib.losses.log_loss(predictions= decoded, labels = batch_fovea)
+        #sparcity_cost = (beta*tf.nn.l2_loss(encoded) + beta*tf.nn.l2_loss(e1))
+        total_loss = logloss #+ sparcity_cost
+        train_op = tf.train.GradientDescentOptimizer(alpha).minimize(total_loss)
 
     with tf.name_scope('Summaries') :
         tf.summary.histogram('encoded', encoded)
-        tf.summary.scalar('mse', mse)
-        tf.summary.scalar('loss', tf.reduce_sum(loss))
-        tf.summary.scalar('cost', cost)
+        tf.summary.scalar('log_loss', logloss)
+        tf.summary.scalar('learning_rate', alpha)
         summaries = tf.summary.merge_all()
+
+
+"""
+            W_conv2 = tf.Variable(tf.truncated_normal([4, 4, 64, 128], stddev = stddev))
+            tf.summary.histogram('W_conv2', W_conv2)
+            b_conv2 = tf.Variable(tf.zeros([128]))
+            tf.summary.histogram('b_conv2', b_conv2)
+
+                        W_deconv1 = tf.Variable(tf.truncated_normal([2, 2, 64, 128], stddev = stddev))
+                        tf.summary.histogram('W_deconv1', W_deconv1)
+                        b_deconv1 = tf.Variable(tf.zeros([64]))
+                        tf.summary.histogram('b_deconv1', b_deconv1)
+
+            e2 = tf.sigmoid(
+                    tf.nn.conv2d(e1, filter = W_conv2,
+                        strides = [1,2,2,1],
+                        padding = 'SAME') +
+                    b_conv2
+                    )
+
+                        d1 =  tf.sigmoid(
+                                tf.nn.conv2d_transpose(
+                                    data,
+                                    filter = W_deconv1,
+                                    output_shape = [batch_size, fovea_size // 4, fovea_size //4, 64],
+                                    strides = [1,2,2,1],
+                                    padding = 'SAME') + b_deconv1)
+"""
