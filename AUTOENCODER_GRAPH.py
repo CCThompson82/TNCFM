@@ -1,8 +1,5 @@
 """This is a file encoding the Graph for fovea autoencoding."""
 
-autoencoder_depths = [3, 3]
-autoencoder_kernels = [5, 3]
-autoencoder_strides = [2, 2]
 
 graph = tf.Graph()
 
@@ -52,7 +49,7 @@ with graph.as_default() :
                             strides = [1, autoencoder_strides[0], autoencoder_strides[0], 1],
                             padding = 'SAME') + b_conv1
             e2 = tf.nn.conv2d(e1,
-                                filter = W_conv1,
+                                filter = W_conv2,
                                 strides = [1, autoencoder_strides[1], autoencoder_strides[1], 1],
                                 padding = 'SAME') + b_conv2
         return e1, e2
@@ -62,11 +59,9 @@ with graph.as_default() :
             d2 = tf.nn.conv2d_transpose(
                     data,
                     filter = W_deconv2,
-                    output_shape = [batch_size, fovea_size // autoencoder_strides[1], fovea_size // autoencoder_strides[1], num_channels],
+                    output_shape = [batch_size, fovea_size // autoencoder_strides[1], fovea_size // autoencoder_strides[1], autoencoder_depths[1]],
                     strides = [1, autoencoder_strides[1], autoencoder_strides[1], 1],
                     padding = 'SAME') + b_deconv2
-
-
 
             d1 = tf.sigmoid(
                     tf.nn.conv2d_transpose(

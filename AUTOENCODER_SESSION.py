@@ -85,3 +85,4 @@ with tf.Session(graph = graph) as session :
 
     print("\nTRAINING FINISHED!\n\nSaving final model...")
     saver.save(session, 'FINAL_MODELS/'+version_ID)
+    print("Final model saved!  See 'FINAL_MODELS/'{}'".format(version_ID))
