@@ -1,5 +1,8 @@
 """This is a file encoding the Graph for fovea autoencoding."""
 
+autoencoder_depths = [32]
+autoencoder_kernels = [5]
+autoencoder_strides = [2]
 
 graph = tf.Graph()
 
@@ -8,13 +11,13 @@ with graph.as_default() :
     with tf.variable_scope('Variables') :
 
         with tf.variable_scope('Convolutions') :
-            W_conv1 = tf.Variable(tf.truncated_normal([5, 5, num_channels, 32], stddev = stddev))
+            W_conv1 = tf.Variable(tf.truncated_normal([autoencoder_kernels[0], autoencoder_kernels[0], num_channels, autoencoder_depths[0]], stddev = stddev))
             tf.summary.histogram('W_conv1', W_conv1)
-            b_conv1 = tf.Variable(tf.zeros([32])) # experiment with this value
+            b_conv1 = tf.Variable(tf.zeros([autoencoder_depths[0]])) # experiment with this value
             tf.summary.histogram('b_conv1', b_conv1)
 
         with tf.variable_scope('Transpose_Convolution') :
-            W_deconv1 = tf.Variable(tf.truncated_normal([5, 5, num_channels, 32], stddev = stddev))
+            W_deconv1 = tf.Variable(tf.truncated_normal([autoencoder_kernels[0], autoencoder_kernels[0], num_channels, autoencoder_depths[0], stddev = stddev))
             tf.summary.histogram('W_deconv1', W_deconv1)
             b_deconv1 = tf.Variable(tf.zeros([num_channels]))
             tf.summary.histogram('b_deconv1', b_deconv1)
@@ -23,7 +26,7 @@ with graph.as_default() :
     def encoder(data) :
         with tf.name_scope('Encoder') :
             e1 =  tf.nn.conv2d(data, filter = W_conv1,
-                            strides = [1, 2, 2, 1],
+                            strides = [1, autoencoder_strides[0], autoencoder_strides[0], 1],
                             padding = 'SAME') + b_conv1
         return e1
 
@@ -34,7 +37,7 @@ with graph.as_default() :
                         data,
                         filter = W_deconv1,
                         output_shape = [batch_size, fovea_size, fovea_size, num_channels],
-                        strides = [1,2,2,1],
+                        strides = [1, autoencoder_strides[0], autoencoder_strides[0], 1],
                         padding = 'SAME')
                     + b_deconv1)
         return d1
