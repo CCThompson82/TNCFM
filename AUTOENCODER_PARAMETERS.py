@@ -10,6 +10,6 @@ stddev = 0.2
 batch_size = 16*5 # equal to the number of fovea taken from each image multiplied by the number of high resolution images per batch
 
 
-autoencoder_depths = [16, 16]
+autoencoder_depths = [16, 32]
 autoencoder_kernels = [5, 3]
 autoencoder_strides = [2, 2]

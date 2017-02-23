@@ -36,7 +36,7 @@ with graph.as_default() :
 
             W_deconv1 = tf.Variable(
                             tf.truncated_normal(
-                                [autoencoder_kernels[1], autoencoder_kernels[1], num_channels, autoencoder_depths[1]],
+                                [autoencoder_kernels[1], autoencoder_kernels[1], num_channels, autoencoder_depths[0]],
                                 stddev = stddev))
             b_deconv1 = tf.Variable(tf.zeros([num_channels]))
             tf.summary.histogram('W_deconv1', W_deconv1)
@@ -45,13 +45,15 @@ with graph.as_default() :
 
     def encoder(data) :
         with tf.name_scope('Encoder') :
-            e1 =  tf.nn.conv2d(data, filter = W_conv1,
+            e1 =  tf.nn.relu(
+                    tf.nn.conv2d(data, filter = W_conv1,
                             strides = [1, autoencoder_strides[0], autoencoder_strides[0], 1],
-                            padding = 'SAME') + b_conv1
-            e2 = tf.nn.conv2d(e1,
+                            padding = 'SAME') + b_conv1)
+            e2 = tf.nn.relu(
+                    tf.nn.conv2d(e1,
                                 filter = W_conv2,
                                 strides = [1, autoencoder_strides[1], autoencoder_strides[1], 1],
-                                padding = 'SAME') + b_conv2
+                                padding = 'SAME') + b_conv2)
         return e1, e2
 
     def decoder(data) :
@@ -59,7 +61,7 @@ with graph.as_default() :
             d2 = tf.nn.conv2d_transpose(
                     data,
                     filter = W_deconv2,
-                    output_shape = [batch_size, fovea_size // autoencoder_strides[1], fovea_size // autoencoder_strides[1], autoencoder_depths[1]],
+                    output_shape = [batch_size, fovea_size // autoencoder_strides[1], fovea_size // autoencoder_strides[1], autoencoder_depths[0]],
                     strides = [1, autoencoder_strides[1], autoencoder_strides[1], 1],
                     padding = 'SAME') + b_deconv2
 
