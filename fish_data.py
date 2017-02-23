@@ -9,7 +9,7 @@ Dependencies:
     * scipy.special as special
     * matplotlib.pyplot as plt
     * tensorflow as tf
-    * pickle 
+    * pickle
 
 """
 
@@ -66,7 +66,7 @@ def make_coordinates_dict(filename_list, resize_val = 1.0, presize = 256, bins =
         print("Attempting to load dictionary pickle...")
         with open('coordinates_dictionary.pickle', 'rb') as handle:
             master_dict = pickle.load(handle)
-        print("Dictionary loaded...")
+        print("Dictionary loaded!")
     except :
         print("Not able to load dictionary!")
         force = True
