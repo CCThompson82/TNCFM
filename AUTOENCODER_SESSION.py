@@ -16,16 +16,17 @@ with tf.Session(graph = graph) as session :
     if restore_model == False :
         tf.global_variables_initializer().run()
         print("Weight and bias variables initialized!\n")
-        batch_num = 0
-    """
+        epoch = 0
+        image_count = 0
+        epoch_list = fish_filenames.copy()
+
     elif restore_model == True :
         restorer = tf.train.Saver()
         print("Restorer initialized!")
         restorer.restore(session, tf.train.latest_checkpoint(directory))
         print("Weights and biases retrieved from {} in {}\n".format(last_version, directory))
-        batch_num = new_batch_num
         num_epochs = new_num_epochs
-    """
+
 
     saver = tf.train.Saver()
     print("Checkpoint saver initialized!\n")
@@ -35,9 +36,6 @@ with tf.Session(graph = graph) as session :
 
     print("Training model...\n")
 
-    epoch = 0
-    epoch_list = fish_filenames.copy()
-    image_count = 0
     while epoch < num_epochs :
         batch_img_foveas = None
         for _ in range(5) :
