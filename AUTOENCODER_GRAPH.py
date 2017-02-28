@@ -114,6 +114,8 @@ with graph.as_default() :
     with tf.name_scope('Decoding') :
         decoded, d2, d3 = decoder(encoded)
 
+    embedding = tf.nn.max_pool(encoded, ksize = [1,3,3,1], strides = [1,2,2,1], padding = 'VALID')
+
 
     with tf.name_scope('Training') :
         logloss = tf.contrib.losses.log_loss(predictions= decoded, labels = batch_fovea)
