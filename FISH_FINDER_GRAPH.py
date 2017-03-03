@@ -86,21 +86,21 @@ with fish_finder.as_default() :
         """ Function to iterate through several rounds of convolution.  An input
         image of size 224x224x3 will have the following tensor sizes,
         assuming conv_depths of [16, 16, 64, 64, 128, 128, 256, 256, 512, 512]:
-            * data =    224x224x3  = 150528
-            * c1 =      224x224x16 = 802816
-            * c2 =      224x224x16 = 802816 ->> (pooled) ->> 112x112x16 = 200704
-            * c3 =      112x112x64 = 802816
-            * c4 =      112x112x64 = 802816 ->> (pooled) ->> 56x56x64   = 200704
-            * c5 =      56x56x128  = 401408
-            * c6 =      56x56x128  = 401408 ->> (pooled) ->> 27x27x128  =  93312
-            * c7 =      27x27x256  = 186624
-            * c8 =      27x27x256  = 186624 ->> (pooled) ->> 13x13x256  =  43264
-            * c9 =      13x13x512  =  86528
-            * c10 =     13x13x512  =  86538 --> (pooled) ->> 7x7x512    =  25088
+            * data =    224x224x3  = 150528 ->> (strided) ->> 112x112x3
+            * c1 =      112x112x32 = 401408
+            * c2 =      112x112x32 = 401408 ->> (pooled) ->> 56x56x32   = 100352
+            * c3 =      56x56x64   = 200704
+            * c4 =      56x56x64   = 200704 ->> (pooled) ->> 27x27x64   =  46656
+            * c5 =      27x27x128  =  93312
+            * c6 =      27x27x128  =  93312 ->> (pooled) ->> 13x13x128  =  21632
+            * c7 =      13x13x256  =  43264
+            * c8 =      13x13x256  =  43264 ->> (pooled) ->> 7x7x256   =   12544
+            * c9 =      7x7x512    =  25088
+            * c10 =     7x7x512    =  25088 --> (pooled) ->> 3x3x512    =   4608
 
         """
         with tf.name_scope('Convolution') :
-            def conv_conv_pool(data, W1, b1, W2, b2) :
+            def conv_conv_pool(data, W1, b1, W2, b2, conv_stride) :
                 """ Convenience function for iteration of conv-conv-pool
                 network architecture"""
                 i1 = tf.nn.relu(
@@ -117,18 +117,18 @@ with fish_finder.as_default() :
                         padding ='VALID')
                 return i1, i2
 
-            c1, c2 = conv_conv_pool(data, W_conv1, b_conv1, W_conv2, b_conv2)
-            c3, c4 = conv_conv_pool(c2, W_conv3, b_conv3, W_conv4, b_conv4)
-            c5, c6 = conv_conv_pool(c4, W_conv5, b_conv5, W_conv6, b_conv6)
-            c7, c8 = conv_conv_pool(c6, W_conv7, b_conv7, W_conv8, b_conv8)
-            c9, c10 = conv_conv_pool(c8, W_conv9, b_conv9, W_conv10, b_conv10)
+            c1, c2 = conv_conv_pool(data, W_conv1, b_conv1, W_conv2, b_conv2, conv_stride[0])
+            c3, c4 = conv_conv_pool(c2, W_conv3, b_conv3, W_conv4, b_conv4, conv_stride[1])
+            c5, c6 = conv_conv_pool(c4, W_conv5, b_conv5, W_conv6, b_conv6, conv_stride[1])
+            c7, c8 = conv_conv_pool(c6, W_conv7, b_conv7, W_conv8, b_conv8, conv_stride[1])
+            c9, c10 = conv_conv_pool(c8, W_conv9, b_conv9, W_conv10, b_conv10, conv_stride[1])
         return c10
 
     def dense_layers(data, drop_prob) :
         """Executes a series of dense layers.  Tensor sizes :
-            * fc11 =    25088 -> 4096
-            * fc12 =    4096  -> 1024
-            * fc13 =    1024 -> 256 
+            * fc11 =    4608 -> 1024
+            * fc12 =    1024 ->  512
+            * fc13 =    512  -> 256
         """
         def fc(data, W, b) :
             """Convenience function for dense layer with dropout"""
