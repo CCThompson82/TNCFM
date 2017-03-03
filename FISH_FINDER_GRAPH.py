@@ -55,7 +55,7 @@ with fish_finder.as_default() :
                 tf.summary.histogram('b_conv9', b_conv9)
             with tf.name_scope('Convolution_10') :
                 W_conv10 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depths[8], conv_depth[9]], stddev = stddev))
-                b_conv10 = tf.Variable(tf.zeros([conv_depths[9])) 
+                b_conv10 = tf.Variable(tf.zeros([conv_depths[9]))
                 tf.summary.histogram('W_conv10', W_conv10)
                 tf.summary.histogram('b_conv10', b_conv10)
         with tf.variable_scope('Dense_layers') :
@@ -83,7 +83,22 @@ with fish_finder.as_default() :
 
 
     def convolutions(data) :
-        """ Convenience function to iterate through several rounds of convolution"""
+        """ Function to iterate through several rounds of convolution.  An input
+        image of size 224x224x3 will have the following tensor sizes,
+        assuming conv_depths of [16, 16, 64, 64, 128, 128, 256, 256, 512, 512]:
+            * data =    224x224x3  = 150528
+            * c1 =      224x224x16 = 802816
+            * c2 =      224x224x16 = 802816 ->> (pooled) ->> 112x112x16 = 200704
+            * c3 =      112x112x64 = 802816
+            * c4 =      112x112x64 = 802816 ->> (pooled) ->> 56x56x64   = 200704
+            * c5 =      56x56x128  = 401408
+            * c6 =      56x56x128  = 401408 ->> (pooled) ->> 27x27x128  =  93312
+            * c7 =      27x27x256  = 186624
+            * c8 =      27x27x256  = 186624 ->> (pooled) ->> 13x13x256  =  43264
+            * c9 =      13x13x512  =  86528
+            * c10 =     13x13x512  =  86538 --> (pooled) ->> 7x7x512    =  25088
+
+        """
         with tf.name_scope('Convolution') :
             def conv_conv_pool(data, W1, b1, W2, b2) :
                 """ Convenience function for iteration of conv-conv-pool
@@ -110,7 +125,11 @@ with fish_finder.as_default() :
         return c10
 
     def dense_layers(data, drop_prob) :
-        """Executes a series of dense layers"""
+        """Executes a series of dense layers.  Tensor sizes :
+            * fc11 =    25088 -> 4096
+            * fc12 =    4096  -> 1024
+            * fc13 =    1024 -> 256 
+        """
         def fc(data, W, b) :
             """Convenience function for dense layer with dropout"""
             fc = tf.nn.dropout(
