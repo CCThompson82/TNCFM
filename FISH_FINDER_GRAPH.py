@@ -148,19 +148,28 @@ with fish_finder.as_default() :
 
     with tf.name_scope('Training') :
         with tf.name_scope('Input') :
-            # TODO : Write session for this training set input
-            # X
-            # y
-            # learning_rate
+            train_images = tf.placeholder(tf.float32, shape = [batch_size, fov_size, fov_size, num_channels])
+            train_labels = tf.placehoder(tf.int32, shape = [batch_size, num_labels])
+            learning_rate = tf.placeholder(tf.float32, shape = () )
         with tf.name_scope('Network') :
             conv_output = convolutions(X)
             dense_input = tf.contrib.layers.flatten(conv_output)
-            dense_output = dense_layers(dense_input)
+            dense_output = dense_layers(dense_input, drop_prob = drop_prob)
         with tf.name_scope('Classifier')
             logits = tf.matmul(dense_output, W_clf) + b_clf
         with tf.name_scope('Backpropigation')
             cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, y))
             train_op = tf.train.MomentumOptimizer(learning_rate, 0.9).minimize(cross_entropy)
+
+    with tf.name_scope('Staged_prediction') :
+        with tf.name_scope('Input') :
+            staged_set = tf.placeholder(tf.float32, shape = [batch_size, fov_size, fovea_size, num_channels])
+        with tf.name_scope('Network') :
+            staged_conv_output = convolutions(staged_set)
+            staged_dense_input = tf.contrib.layers(staged_conv_output)
+            staged_dense_output = dense_layers(staged_dense_input, drop_prob = 1.0)
+        with tf.name_scope('Prediction') :
+            staged_logits = tf.matmul(staged_dense_output, W_clf) + b_clf
 
 
     with tf.name_scope('Summaries') :
