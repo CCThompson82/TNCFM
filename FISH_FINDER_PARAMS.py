@@ -2,8 +2,9 @@
 num_channels = 3
 fov_size = 224
 num_labels = 8
-batch_size = 2
+batch_size = 64
 num_fovea = 100
+summary_rate = 10 # tensorboard writing events after x batches
 
 onehot_dict = {'ALB' : np.array([1,0,0,0,0,0,0,0]),
                'BET' : np.array([0,1,0,0,0,0,0,0]),

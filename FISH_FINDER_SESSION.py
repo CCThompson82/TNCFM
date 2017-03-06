@@ -7,6 +7,11 @@ with tf.Session(graph = fish_finder) as session :
         tf.global_variables_initializer().run()
         print("Weight and bias variables initialized!\n")
         epochs_completed = 0
+        meta_dict = {'Init':  { 'Num_epochs' : epochs_completed,
+                                'checkpoint_directory' :  os.getcwd()+'/model_checkpoints/'+version_ID}}
+
+        with open(version_ID+'/meta_dictionary.pickle', 'wb') as fmd :
+            pickle.dump(meta_dict, fmd)
 
     elif restore_model == True :
         restorer = tf.train.Saver()
@@ -139,13 +144,13 @@ with tf.Session(graph = fish_finder) as session :
     # Helper functions ---------------------
 
 
-
+    total_fovea = 0
     while open('stop.txt', 'r').read().strip() == 'False' :
         with open('training_dictionary.pickle', 'rb') as handle :
             training_set_dictionary = pickle.load(handle)
         training_set_list = [x for x in training_set_dictionary]  # full of the keys from training set dictionary
 
-        while len(train_set_list) > batch_size :
+        while len(training_set_list) > batch_size :
             batch_X, batch_y, _ = prepare_batch(training_set_dictionary, training_set_list, batch_size = batch_size)
 
 
@@ -153,12 +158,15 @@ with tf.Session(graph = fish_finder) as session :
                             train_labels = batch_y,
                             learning_rate = float(open('learning_rate.txt', 'r').read().strip())
                         }
+            total_fovea += batch_size
 
-            _ = session.run(train_op, feed_dict = feed_dict)
+            if (total_fovea % (batch_size*summary_rate)) == 0 :
+                _ , summary_fetch = session.run([train_op, summaries], feed_dict = feed_dict)
+                writer.add_summary(summary_fetch,total_fovea )
+            else :
+                _ = session.run(train_op, feed_dict = feed_dict)
 
-            # TODO : Feed in and out for one summary at the end of the epoch with an average scalar.
 
-        # TODO : Write to summary tensorboard in the final training session call of this epoch.
 
 
         new_fovea_dict = fovea_generation(image_dictionary, num_fovea = num_fovea)
@@ -186,8 +194,20 @@ with tf.Session(graph = fish_finder) as session :
         with open('staged_dictionary.pickle', 'wb') as fsd: # whatever is left after while loop will be saved into the staged set for next epoch.
             pickle.dump(staged_dictionary, fsd)
         with open('training_dictionary.pickle', 'wb') as ftd:
-            pickle.dump(training_dict, ftd)
+            pickle.dump(training_set_dictionary, ftd)
 
+        epochs_completed += 1
 
-        # TODO : save meta data file
-        # TODO : checkpoint weights
+        saver.save(session, 'model_checkpoints/'+version_ID, global_step = total_fovea)
+        print("="*40)
+        print("Model checkpoint created after {} images consumed".format((batch_num+1)*batch_size))
+        print("Model can be restored from: \n\n{}\n".format(os.getcwd()+'/model_checkpoints/'+version_ID))
+
+        meta_dict[epochs_completed] = {'Num_epochs' : epochs_completed,
+                                       'training_set' : len(training_set_dictionary),
+                                       'stage_set' : len(staged_dictionary),
+                                       'fovea_trained' : total_fovea,
+                                       'checkpoint_directory' :  os.getcwd()+'/model_checkpoints/'+version_ID}
+
+        with open(version_ID+'/meta_dictionary.pickle', 'wb') as fmd :
+            pickle.dump(meta_dict, fmd)
