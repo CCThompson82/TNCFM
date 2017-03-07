@@ -3,6 +3,8 @@
 logs_path = os.getcwd()+'/TB_logs/'+version_ID
 
 with tf.Session(graph = fish_finder) as session :
+
+    # TODO : refactor to look at meta data folder in order to decide to initate or retrieve weights
     if restore_model == False :
         tf.global_variables_initializer().run()
         print("Weight and bias variables initialized!\n")
@@ -51,7 +53,7 @@ with tf.Session(graph = fish_finder) as session :
             fovea = np.expand_dims(
                         misc.imresize(
                             misc.imread(f, mode = 'RGB'),
-                                size = scale)[y_off:(y_off+fov_size]), x_off:x_off+fov_size), :],
+                                size = scale)[y_off:(y_off+fov_size), x_off:(x_off+fov_size), :],
                                 [0])
             try :
                 label = f_dict['fovea_label'].replace(onehot_dict)  # TODO : make into pandas for replace to work as expected
@@ -155,8 +157,8 @@ with tf.Session(graph = fish_finder) as session :
 
 
             feed_dict = {   train_images : batch_X,
-                            train_labels = batch_y,
-                            learning_rate = float(open('learning_rate.txt', 'r').read().strip())
+                            train_labels : batch_y,
+                            learning_rate : float(open('learning_rate.txt', 'r').read().strip())
                         }
             total_fovea += batch_size
 
