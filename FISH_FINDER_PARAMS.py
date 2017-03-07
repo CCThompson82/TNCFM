@@ -7,7 +7,7 @@ num_fovea = 100
 summary_rate = 10 # tensorboard writing events after x batches
 stddev = 0.1
 
-onehot_dict = {'ALB' : np.array([1,0,0,0,0,0,0,0]),
+label_dict = {'ALB' : np.array([1,0,0,0,0,0,0,0]),
                'BET' : np.array([0,1,0,0,0,0,0,0]),
                'DOL' : np.array([0,0,1,0,0,0,0,0]),
                'LAG' : np.array([0,0,0,1,0,0,0,0]),
@@ -20,7 +20,7 @@ onehot_dict = {'ALB' : np.array([1,0,0,0,0,0,0,0]),
 conv_kernel = 3
 conv_stride = 1
 
-conv_depths = [32, 32, 64, 64, 128, 128, 256, 256, 512, 512]
+conv_depth = [32, 32, 64, 64, 128, 128, 256, 256, 512, 512]
 
 # Pooling
 pool_kernel = 3

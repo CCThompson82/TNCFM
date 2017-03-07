@@ -10,52 +10,52 @@ with fish_finder.as_default() :
         with tf.variable_scope('Convolutions') :
             with tf.name_scope('Convolution_1') :
                 W_conv1 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, num_channels, conv_depth[0]], stddev = stddev))
-                b_conv1 = tf.Variable(tf.zeros([conv_depths[0]]))
+                b_conv1 = tf.Variable(tf.zeros([conv_depth[0]]))
                 tf.summary.histogram('W_conv1', W_conv1)
                 tf.summary.histogram('b_conv1', b_conv1)
             with tf.name_scope('Convolution_2') :
-                W_conv2 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depths[0], conv_depth[1]], stddev = stddev))
-                b_conv2 = tf.Variable(tf.zeros([conv_depths[1]]))
+                W_conv2 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depth[0], conv_depth[1]], stddev = stddev))
+                b_conv2 = tf.Variable(tf.zeros([conv_depth[1]]))
                 tf.summary.histogram('W_conv2', W_conv2)
                 tf.summary.histogram('b_conv2', b_conv2)
             with tf.name_scope('Convolution_3') :
                 W_conv3 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depth[1], conv_depth[2]], stddev = stddev))
-                b_conv3 = tf.Variable(tf.zeros([conv_depths[2]]))
+                b_conv3 = tf.Variable(tf.zeros([conv_depth[2]]))
                 tf.summary.histogram('W_conv3', W_conv3)
                 tf.summary.histogram('b_conv3', b_conv3)
             with tf.name_scope('Convolution_4') :
-                W_conv4 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depths[2], conv_depth[3]], stddev = stddev))
-                b_conv4 = tf.Variable(tf.zeros([conv_depths[3]]))
+                W_conv4 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depth[2], conv_depth[3]], stddev = stddev))
+                b_conv4 = tf.Variable(tf.zeros([conv_depth[3]]))
                 tf.summary.histogram('W_conv4', W_conv4)
                 tf.summary.histogram('b_conv4', b_conv4)
             with tf.name_scope('Convolution_5') :
-                W_conv5 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depths[3], conv_depth[4]], stddev = stddev))
-                b_conv5 = tf.Variable(tf.zeros([conv_depths[4]]))
+                W_conv5 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depth[3], conv_depth[4]], stddev = stddev))
+                b_conv5 = tf.Variable(tf.zeros([conv_depth[4]]))
                 tf.summary.histogram('W_conv5', W_conv5)
                 tf.summary.histogram('b_conv5', b_conv5)
             with tf.name_scope('Convolution_6') :
-                W_conv6 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depths[4], conv_depth[5]], stddev = stddev))
-                b_conv6 = tf.Variable(tf.zeros([conv_depths[5]]))
+                W_conv6 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depth[4], conv_depth[5]], stddev = stddev))
+                b_conv6 = tf.Variable(tf.zeros([conv_depth[5]]))
                 tf.summary.histogram('W_conv6', W_conv6)
                 tf.summary.histogram('b_conv6', b_conv6)
             with tf.name_scope('Convolution_7') :
-                W_conv7 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depths[5], conv_depth[6]], stddev = stddev))
-                b_conv7 = tf.Variable(tf.zeros([conv_depths[6]]))
+                W_conv7 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depth[5], conv_depth[6]], stddev = stddev))
+                b_conv7 = tf.Variable(tf.zeros([conv_depth[6]]))
                 tf.summary.histogram('W_conv7', W_conv7)
                 tf.summary.histogram('b_conv7', b_conv7)
             with tf.name_scope('Convolution_8') :
-                W_conv8 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depths[6], conv_depth[7]], stddev = stddev))
-                b_conv8 = tf.Variable(tf.zeros([conv_depths[7]]))
+                W_conv8 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depth[6], conv_depth[7]], stddev = stddev))
+                b_conv8 = tf.Variable(tf.zeros([conv_depth[7]]))
                 tf.summary.histogram('W_conv8', W_conv8)
                 tf.summary.histogram('b_conv8', b_conv8)
             with tf.name_scope('Convolution_9') :
-                W_conv9 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depths[7], conv_depth[8]], stddev = stddev))
-                b_conv9 = tf.Variable(tf.zeros([conv_depths[8]]))
+                W_conv9 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depth[7], conv_depth[8]], stddev = stddev))
+                b_conv9 = tf.Variable(tf.zeros([conv_depth[8]]))
                 tf.summary.histogram('W_conv9', W_conv9)
                 tf.summary.histogram('b_conv9', b_conv9)
             with tf.name_scope('Convolution_10') :
-                W_conv10 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depths[8], conv_depth[9]], stddev = stddev))
-                b_conv10 = tf.Variable(tf.zeros([conv_depths[9]]))
+                W_conv10 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depth[8], conv_depth[9]], stddev = stddev))
+                b_conv10 = tf.Variable(tf.zeros([conv_depth[9]]))
                 tf.summary.histogram('W_conv10', W_conv10)
                 tf.summary.histogram('b_conv10', b_conv10)
         with tf.variable_scope('Dense_layers') :
@@ -85,7 +85,7 @@ with fish_finder.as_default() :
     def convolutions(data) :
         """ Function to iterate through several rounds of convolution.  An input
         image of size 224x224x3 will have the following tensor sizes,
-        assuming conv_depths of [16, 16, 64, 64, 128, 128, 256, 256, 512, 512]:
+        assuming conv_depth of [16, 16, 64, 64, 128, 128, 256, 256, 512, 512]:
             * data =    224x224x3  = 150528 ->> (strided) ->> 112x112x3
             * c1 =      112x112x32 = 401408
             * c2 =      112x112x32 = 401408 ->> (pooled) ->> 56x56x32   = 100352
