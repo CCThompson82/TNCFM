@@ -381,30 +381,32 @@ def prepare_batch(dictionary, training_set_list, batch_size, fov_size, label_dic
 
     return X_batch, y_batch, keys
 
-def fovea_generation(image_dictionary, num_fovea = 100) :
+def fovea_generation(image_dictionary, num_fovea = 100, fov_size = 224) :
     """
     Function for random sampling of high-resolution image files, followed by
     random fovea generation.
     """
     new_fovea_dict = {}
     f_list = [x for x in image_dictionary]
-    samples_f_list = np.random.choice(f_list, num_fovea)
+    samples_f_list = np.random.choice(f_list, num_fovea).tolist()
 
     while len(samples_f_list) > 0 :
-        f = samples_f_list.pop(np.random.randint(0,len(samples_f_list),1))
+        f = samples_f_list.pop(np.random.randint(0,len(samples_f_list)))
         scale = 0.4 * np.random.rand() + 0.4
         shape = misc.imresize(misc.imread(f, mode = 'RGB'), size = scale).shape
-        y_offset = np.random.randint(0, shape[0]-fov_size, 1)
-        x_offset = np.random.randint(0, shape[1]-fov_size, 1)
+        y_offset = np.random.randint(0, shape[0]-fov_size, 1)[0]
+        x_offset = np.random.randint(0, shape[1]-fov_size, 1)[0]
 
-        new_fovea_dict[f] = {'scale': scale,
+        new_fovea_dict[f] = {'f' : f ,
+                             'scale': scale,
                              'coordinates' : {'y_offset' : y_offset, 'x_offset' : x_offset},
                              'image_label' : image_dictionary[f]['image_label'],
-                             'staged_steps' : 0 }
+                             'staged_steps' : 0,
+                             'fovea_label' : None }
     return new_fovea_dict
 
 
-def stage_set_supervisor(stgd_lgts, staged_dictionary, training_set_dictionary, keys) :
+def stage_set_supervisor(stgd_lgts, staged_dictionary, training_set_dictionary, keys, label_dict, reverse_label_dict) :
     """
     Fn will destage, keep staged, or commit fovea from the stage dictionary based on set of criteria :
         * Destage
@@ -423,28 +425,32 @@ def stage_set_supervisor(stgd_lgts, staged_dictionary, training_set_dictionary, 
         pred = stgd_lgts[i,:]
         keep_threshold = float(open('keep_threshold.txt', 'r').read().strip())
         commit_threshold = open('keep_threshold.txt', 'r').read().strip()
-        commit, keep = False, False
+
+
         if pred[np.argmax(pred)] < keep_threshold :
             keep = False
-        elif np.argmax(pred) != np.argmax( staged_dictionary.get(key)['image_label'].replace(onehot_dict) ) :
-            if np.argmax(pred) == 4 : # NoF label
+        else : # high confidence prediction has been made
+            # Does prediction match possible outcomes based on the high-resolution label?
+            NoF_bool = np.argmax(pred) == 4
+            label_bool = np.argmax(pred) == np.argmax(label_dict.get(staged_dictionary[key].get('image_label')))
+            test_bool = staged_dictionary[key].get('image_label') == 'TEST'
+            if np.any([NoF_bool, label_bool, test_bool]) :
                 keep = True
-                staged_dictionary.get(key)['stage_steps'] += 1
-                if commit_threshold == 'Manual' :
-                    commit = False
-                elif staged_dictionary.get(key)['stage_steps'] == commit_threshold :
-                    commit = True
-                else :
-                    commit = False
             else :
                 keep = False
-        else :
-            print("ERROR in stage_set_supervisor parsing")
 
-        if commit :
-            training_set_dictionary.append( {key : staged_dictionary.pop(key)} )
-        elif keep :
-            pass
+        if keep :
+            staged_dictionary.get(key)['staged_steps'] += 1
+            if commit_threshold == 'Manual' :
+                commit = False
+            elif staged_dictionary.get(key)['staged_steps'] == commit_threshold :
+                commit = True
+            else :
+                commit = False
+
+            if commit :
+                staged_dictionary[key]['fovea_label'] = reverse_label_dict.get(np.argmax(pred))
+                training_set_dictionary.append( {key : staged_dictionary.pop(key)} )
         else :
             _ = staged_dictionary.pop(key)
     return staged_dictionary, training_set_dictionary
