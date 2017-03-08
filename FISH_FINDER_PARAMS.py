@@ -5,7 +5,7 @@ num_labels = 8
 batch_size = 64
 num_fovea = 100
 summary_rate = 1 # tensorboard writing events after x batches
-stddev = 0.08
+stddev = 0.04
 
 label_dict = {'ALB' : np.array([1,0,0,0,0,0,0,0]),
                'BET' : np.array([0,1,0,0,0,0,0,0]),

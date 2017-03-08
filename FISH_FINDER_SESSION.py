@@ -85,7 +85,8 @@ with tf.Session(graph = fish_finder) as session :
 
         new_fovea_dict = fd.fovea_generation(image_dictionary, num_fovea = num_fovea, fov_size = fov_size)
 
-        if total_fovea == batch_size :
+
+        if epochs_completed == 0 :
             staged_dictionary = new_fovea_dict
             with open(md+'/staged_dictionary.pickle', 'wb') as fsd:
                 pickle.dump(staged_dictionary, fsd)
