@@ -16,12 +16,12 @@ with tf.Session(graph = fish_finder) as session :
         with open(md+'/meta_dictionary.pickle', 'rb') as  handle :
             meta_dict = pickle.load(handle)
         print("Metadata dictionary loaded!")
-        epochs_completed = meta_dict.get(np.max([key for key in meta_dict])).get('Epochs_completed')
-        total_fovea = meta_dict.get(np.max([key for key in meta_dict])).get('fovea_consumed')
+        epochs_completed = meta_dict.get(np.max([key for key in meta_dict])).get('Num_epochs')
+        total_fovea = meta_dict.get(np.max([key for key in meta_dict])).get('fovea_trained')
 
         restorer = tf.train.Saver()
         print("Initializing restorer...")
-        restorer.restore(session, tf.train.latest_checkpoint(md+'/checkpoint'))
+        restorer.restore(session, tf.train.latest_checkpoint(md))
         print("Weights and biases retrieved!  Picking up at {} epochs completed : {} training images observed".format(epochs_completed, total_fovea))
 
         saver = tf.train.Saver()
@@ -35,9 +35,9 @@ with tf.Session(graph = fish_finder) as session :
 
         tf.global_variables_initializer().run()
         print("Weight and bias variables initialized!\n")
-        meta_dict = {0 : { 'Epochs_completed' : 0,
+        meta_dict = {0 : { 'Num_epochs' : 0,
                             'version_ID' : version_ID,
-                            'fovea_consumed' : 0}
+                            'fovea_trained' : 0}
                     }
 
         with open(md+'/meta_dictionary.pickle', 'wb') as fmd :
@@ -46,6 +46,7 @@ with tf.Session(graph = fish_finder) as session :
         saver = tf.train.Saver()
         print("Checkpoint saver initialized!\n")
         epochs_completed = 0
+        total_fovea = 0
         saver.save(session, md+'/checkpoint', global_step = epochs_completed)
     # Tensorboard writer
     writer = tf.summary.FileWriter(tensorboard_path, graph = tf.get_default_graph())
@@ -59,20 +60,30 @@ with tf.Session(graph = fish_finder) as session :
 
 
 
-    print("\nCOMMENCE TRAINING...")
-    total_fovea = 0
+    print("\nTRAINING FISHFINDER...")
     while open('stop.txt', 'r').read().strip() == 'False' :
         with open(md+'/training_dictionary.pickle', 'rb') as handle : #training_dictionary is mutatble and must be loaded at the beginning of every epoch
             training_set_dictionary = pickle.load(handle)
         training_set_list = [x for x in training_set_dictionary]  # full of the keys from training set dictionary
+        # TODO : calculate the fovea label frequencies
+        fov_labels_for_freq = []
+        for key in training_set_list :
+            fov_labels_for_freq.append(training_set_dictionary[key].get('fovea_label'))
+        counts = pd.Series(fov_labels_for_freq).value_counts()
+        counts = counts.reindex(['ALB', 'BET', 'DOL', 'LAG', 'NoF', 'OTHER', 'SHARK', 'YFT'])
+        counts = np.array(counts)
+        count_freq = np.array(counts) / np.sum(counts)
+        count_weights = np.expand_dims((1 / count_freq),0)
+
 
         while len(training_set_list) >= batch_size :
-            batch_X, batch_y, _ = fd.prepare_batch(training_set_dictionary, training_set_list, batch_size = batch_size, fov_size = fov_size, label_dictionary = label_dict)
-
+            batch_X, batch_y, _ = fd.prepare_batch(training_set_dictionary, training_set_list, batch_size = batch_size, fov_size = fov_size, label_dictionary = label_dict, return_label = 'onehot')
 
             feed_dict = {   train_images : batch_X,
                             train_labels : batch_y,
-                            learning_rate : float(open('learning_rate.txt', 'r').read().strip())
+                            learning_rate : float(open('learning_rate.txt', 'r').read().strip()),
+                            beta_weights : float(open('beta_weights.txt', 'r').read().strip()),
+                            frequency_weights : count_weights
                         }
 
             if (total_fovea % (batch_size*summary_rate)) == 0 :
@@ -97,7 +108,7 @@ with tf.Session(graph = fish_finder) as session :
 
         staged_set_list = [x for x in staged_dictionary]
         while len(staged_set_list) >= batch_size :
-            staged_X, staged_y, stg_keys = fd.prepare_batch(staged_dictionary, staged_set_list, batch_size = batch_size, fov_size = fov_size, label_dictionary = label_dict)
+            staged_X, stg_keys = fd.prepare_batch(staged_dictionary, staged_set_list, batch_size = batch_size, fov_size = fov_size, label_dictionary = label_dict, return_label = False)
 
             feed_dict = {staged_set : staged_X}
             stgd_lgts = session.run(staged_logits, feed_dict = feed_dict)
@@ -107,18 +118,21 @@ with tf.Session(graph = fish_finder) as session :
 
         with open(md+'/staged_dictionary.pickle', 'wb') as fsd: # whatever is left after while loop will be saved into the staged set for next epoch.
             pickle.dump(staged_dictionary, fsd)
-        with open(md+'/training_dictionary.pickle', 'wb') as ftd:
-            pickle.dump(training_set_dictionary, ftd)
+        if open('commit_threshold.txt', 'r').read().strip() != 'Manual' :  # when in manual mode, the original training set will be loaded at teh beginning of every epoch until the user saves over it in the backdoor function.  When this is changed to numeric threshold, the training_set_dictionary will be updated and saved over automatically
+            with open(md+'/training_dictionary.pickle', 'wb') as ftd:
+                pickle.dump(training_set_dictionary, ftd)
 
         epochs_completed += 1
-        print("Epoch {} completed with {} fovea examples".format(epochs_completed, total_fovea))
         saver.save(session, md+'/checkpoint', global_step = epochs_completed)
-        print("Model checkpoint created!")
-
+        print("Epoch {} completed : {} fovea observed. Model checkpoint created!".format(epochs_completed, total_fovea))
         meta_dict[epochs_completed] = {'Num_epochs' : epochs_completed,
                                        'training_set' : len(training_set_dictionary),
+                                       'count_weights' : count_weights,
                                        'stage_set' : len(staged_dictionary),
                                        'fovea_trained' : total_fovea,
+                                       'fov_pixels' : fov_size,
+                                       'keep_threshold' : float(open('keep_threshold.txt', 'r').read().strip()) ,
+                                       'commit_threshold' : open('keep_threshold.txt', 'r').read().strip(),
                                        'checkpoint_directory' :  os.getcwd()+'/model_checkpoints/'+version_ID}
 
         with open(md+'/meta_dictionary.pickle', 'wb') as fmd :

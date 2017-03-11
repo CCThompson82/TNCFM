@@ -230,12 +230,9 @@ def generate_balanced_filenames_epoch(f_list, labels, shuffle = True) :
 
 
 
-def process_batch(  f_list, labels, offset, batch_size,
-                    std_size, crop_size, crop_mode = 'centre', normalize = 'default',
-                    pixel_offset = None, pixel_factor = None, mutation = False, verbose = False) :
+def process_fovea(fovea, pixel_norm = 'standard', mutation = False) :
     """
-    Fn preprocesses a batch of images and collects associated labels for input
-    into a tensorflow graph placeholder.
+    Fn preprocesses a single fovea array.
 
     If mutation == True, modifications to input images will be made, each with 0.5
     probability:
@@ -248,98 +245,35 @@ def process_batch(  f_list, labels, offset, batch_size,
             * random rotation 90 degrees
             * TODO : random colour adjustment
 
-    The crop mode can be set to 'random' or 'centre' (TODO : 'all').
-        * 'random' : crop from standard size to crop size (defaults: 256x256 to 224x224).
-                Crop can occur at any viable location that results in the full sized
-                cropped image.
-        * 'centre' : the central most crop is made.
-
     Pixel value normalization is under development.
 
     """
-    assert crop_mode in ['centre', 'random', 'many']
-    if labels is None :
-        labels = np.zeros([len(f_list), 8])
 
+    if mutation :
+        if np.random.randint(0,2,1) == 1 :
+            fovea = np.fliplr(fovea)
+        if np.random.randint(0,2,1) == 1 :
+            fovea = np.flipud(fovea)
+        if np.random.randint(0,2,1) == 1 :
+            fovea = np.rot90(fovea)
 
-    if batch_size == 'all' :
-        batch_size = len(f_list)
-    if offset is None :
-        offset = 0
-
-    for i in range(offset, offset+batch_size) :
-        #read image into environment
-        if i >= len(f_list) :
-            i = i - len(f_list)
-
-        img = misc.imread(f_list[i])
-
-        #shape of img
-        y, x, d = img.shape
-        # determine short side
-        if y <= x :
-            y_short = True
-        else :
-            x_short = True
-        #resize the short size the std_size
-        if y_short == True :
-            img = misc.imresize(img, size = (std_size, std_size*(x//y), 3))
-        elif x_short == True :
-            img = misc.imresize(img, size = (std_size*(y//x), std_size, 3))
-
-        #crop image to crop size
-        y, x, d = img.shape
-
-        if crop_mode == 'centre' :
-            y_off = (y - crop_size) // 2
-            x_off = (x - crop_size) // 2
-        elif crop_mode == 'random' :
-            y_off = np.random.randint(0,(y-crop_size),1)[0]
-            x_off = np.random.randint(0, (x-crop_size), 1)[0]
-
-        elif crop_mode == 'all' :
-            pass
-        else :
-            return "ERROR in image crop"
-        img = img[ y_off:(y_off+crop_size), x_off:(x_off+crop_size), : ]
-
-        if mutation :
-            if np.random.randint(0,2,1) == 1 :
-                img = np.fliplr(img)
-            if np.random.randint(0,2,1) == 1 :
-                img = np.flipud(img)
-            if np.random.randint(0,2,1) == 1 :
-                img = np.rot90(img)
-        try :
-            batch = np.concatenate([batch, np.expand_dims(img, 0)], 0)
-            batch_labels = np.concatenate([batch_labels, labels[[i], :]])
-        except : # trips on first iteration of the batch
-            batch = np.expand_dims(img, 0)
-            batch_labels = labels[[i], :]
 
     #pixel normalization
-    batch = batch.astype(np.float32)
-    if normalize == 'batch' :
-        pass
-        # TODO : sklearn standard scaler for this batch
-    elif normalize == 'custom' :
-        batch = (batch - pixel_offset) / pixel_factor
-    elif normalize == 'default' :
-        batch = (batch - 155.0) / 255.0
-    elif normalize == 'centre' :
-        batch = (batch - 155.0)
+    fovea = fovea.astype(np.float32)
+    if pixel_norm == 'standard' :
+        fovea = (fovea / 255.0) - 0.5
+    elif pixel_norm == 'float' :
+        fovea = (fovea / 256.0)
+        fovea = np.clip(fovea, a_min = 0.0, a_max = 1.0)
+    elif pixel_norm == 'centre' :
+        fovea = (fovea - 128.0)  # TODO : use sklearn to set mean equal to zero?
     else :
         pass
 
-    if verbose :
-        print("Batch shape: {}".format(batch.shape))
-        print("Mean pixel value: {0:.4} +/- {1:.3}".format(np.mean(batch), np.std(batch)))
-        print("Batch label counts: {}".format(np.sum(batch_labels, 0)))
-        print("Batch set is {} Mb".format(batch.nbytes/1000000))
-    return batch, batch_labels
+    return fovea
 
 
-def prepare_batch(dictionary, training_set_list, batch_size, fov_size, label_dictionary) :
+def prepare_batch(dictionary, set_list, batch_size, fov_size, label_dictionary, return_label = 'onehot') :
     """
     Retrieves fovea from a dictionary that contains filname, coordinates of
     fovea, fovea_label, pre-scale float.  As fovea are added to the batch, they
@@ -352,34 +286,34 @@ def prepare_batch(dictionary, training_set_list, batch_size, fov_size, label_dic
         f = f_dict['f']
         scale = f_dict['scale']
         y_off, x_off = f_dict['coordinates']['y_offset'], f_dict['coordinates']['x_offset']
-        fovea = np.expand_dims(
-                    misc.imresize(
+        fovea = misc.imresize(
                         misc.imread(f, mode = 'RGB'),
-                            size = scale)[y_off:(y_off+fov_size), x_off:(x_off+fov_size), :],
-                            0)
-
-        label = np.expand_dims(label_dictionary.get(f_dict['fovea_label']),0) # TODO : make into pandas for replace to work as expected
+                            size = scale)[y_off:(y_off+fov_size), x_off:(x_off+fov_size), :]
+        fovea = np.expand_dims(process_fovea(fovea, pixel_norm = 'standard', mutation = True), 0)
+        label = np.expand_dims(label_dictionary.get(f_dict['fovea_label']),0) # TODO : refactor so that label return is callable.  Label not necessary for stage fovea call
 
         return fovea, label, key
 
     fovea, label, key = retrieve_fovea(
-                        training_set_list.pop(
-                            np.random.randint(0, len(training_set_list))),
-                            fov_size = fov_size)
-
+                            set_list.pop(np.random.randint(0, len(set_list))))
     X_batch = fovea
-    y_batch = label
+    if return_label == 'onehot' :
+        y_batch = label
     keys = [key]
 
-    while y_batch.shape[0] != batch_size :
+    while X_batch.shape[0] != batch_size :
         fovea, label, key = retrieve_fovea(
-                        training_set_list.pop(
-                            np.random.randint(0, len(training_set_list))))
-        X_batch = np.concatenate([X_batch, fovea], 0)
-        y_batch = np.concatenate([y_batch,label], 0)
-        keys.append(key)
+                        set_list.pop(
+                            np.random.randint(0, len(set_list))))
 
-    return X_batch, y_batch, keys
+        X_batch = np.concatenate([X_batch, fovea], 0)
+        if return_label == 'onehot' :
+            y_batch = np.concatenate([y_batch,label], 0)
+        keys.append(key)
+    if return_label == 'onehot' :
+        return X_batch, y_batch, keys
+    else :
+        return X_batch, keys
 
 def fovea_generation(image_dictionary, num_fovea = 100, fov_size = 224) :
     """
@@ -424,7 +358,7 @@ def stage_set_supervisor(stgd_lgts, staged_dictionary, training_set_dictionary, 
     for i, key in enumerate(keys) :
         pred = stgd_lgts[i,:]
         keep_threshold = float(open('keep_threshold.txt', 'r').read().strip())
-        commit_threshold = open('keep_threshold.txt', 'r').read().strip()
+        commit_threshold = open('commit_threshold.txt', 'r').read().strip()
 
 
         if pred[np.argmax(pred)] < keep_threshold :
@@ -433,6 +367,9 @@ def stage_set_supervisor(stgd_lgts, staged_dictionary, training_set_dictionary, 
             # Does prediction match possible outcomes based on the high-resolution label?
             NoF_bool = np.argmax(pred) == 4
             label_bool = np.argmax(pred) == np.argmax(label_dict.get(staged_dictionary[key].get('image_label')))
+            if label_bool :
+                if staged_dictionary[key].get('fovea_label') != None :
+                    label_bool = (staged_dictionary[key].get('fovea_label') == reverse_label_dict.get(np.argmax(pred)))
             test_bool = staged_dictionary[key].get('image_label') == 'TEST'
             if np.any([NoF_bool, label_bool, test_bool]) :
                 keep = True
@@ -440,7 +377,9 @@ def stage_set_supervisor(stgd_lgts, staged_dictionary, training_set_dictionary, 
                 keep = False
 
         if keep :
+            staged_dictionary[key]['fovea_label'] = reverse_label_dict.get(np.argmax(pred))
             staged_dictionary.get(key)['staged_steps'] += 1
+
             if commit_threshold == 'Manual' :
                 commit = False
             elif staged_dictionary.get(key)['staged_steps'] == commit_threshold :
@@ -449,8 +388,62 @@ def stage_set_supervisor(stgd_lgts, staged_dictionary, training_set_dictionary, 
                 commit = False
 
             if commit :
-                staged_dictionary[key]['fovea_label'] = reverse_label_dict.get(np.argmax(pred))
                 training_set_dictionary.append( {key : staged_dictionary.pop(key)} )
         else :
             _ = staged_dictionary.pop(key)
     return staged_dictionary, training_set_dictionary
+
+def manual_stage_manager(staged_dictionary, training_set_dictionary, fovea_size, stage_step_threshold, md) :
+    """
+    Convience function that prompts the user to verify fovea labels predicted by the FISHFINDER model for the
+    fovea that are currently staged.  The stage_step_threshold can be used to filter only those fovea where
+    predictions are stable, having passed the staging test `n` or more consecutive times.  The user may commit as
+    labeled, or may change the fovea label to the fish class when NoF has been incorrectly predicted.  Finally, the
+    user may also destage the fovea if the fovea prediction is incorrect or ambiguous.
+    """
+
+    keys = [key for key in staged_dictionary]
+
+    for key in keys :
+        fov_dict = staged_dictionary.get(key)
+        if fov_dict['staged_steps'] >= stage_step_threshold :
+            print("="*50)
+            print("Image Label: {}     Fovea prediction: {}".format(fov_dict.get('image_label'), fov_dict.get('fovea_label')))
+
+            scale = fov_dict.get('scale')
+            y_off = int(fov_dict.get('coordinates').get('y_offset'))
+            x_off = int(fov_dict.get('coordinates').get('x_offset'))
+            fov = (misc.imresize(
+                        misc.imread(
+                            fov_dict.get('f')), size = scale)[y_off:(y_off+fovea_size),
+                                                              x_off:(x_off+fovea_size), :])
+            show_panel(fov)
+
+            if (fov_dict.get('image_label') == 'NoF' and
+                fov_dict.get('fovea_label') == 'NoF') :
+                print("Auto commit triggered!")
+                commit = 'c'
+            elif (fov_dict.get('image_label') == 'TEST') :
+                commit = input("Correct, commit : c; Incorrect, destage: d       Answer: ")
+            else :
+                commit = input("Correct, commit : c; Incorrect, commit as fish: f, Incorrect, destage: d       Answer: ")
+
+            if commit == 'c' :
+                new_key = key+';_yx_'+str(y_off)+'_'+str(x_off)
+                dict_to_add = {new_key: fov_dict}
+                training_set_dictionary.update(dict_to_add)
+                _ = staged_dictionary.pop(key)
+            elif commit == 'f' :
+                fov_dict['fovea_label'] = fov_dict['image_label']
+                new_key = key+';_yx_'+str(y_off)+'_'+str(x_off)
+                dict_to_add = {new_key: fov_dict}
+                training_set_dictionary.update(dict_to_add)
+                _ = staged_dictionary.pop(key)
+
+            elif commit == 'd' :
+                _ = staged_dictionary.pop(key)
+
+            else :
+                pass
+    print("\n\nNew size of training_set_dictionary: {}".format(len(training_set_dictionary)))
+    print("New size of staged_set_dictionary: {}".format(len(staged_dictionary)))

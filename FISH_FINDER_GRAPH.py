@@ -8,8 +8,13 @@ with fish_finder.as_default() :
     # Variables
     with tf.variable_scope('Variables') :
         with tf.variable_scope('Convolutions') :
+            with tf.name_scope('Convolution_0') :
+                W_conv0 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, num_channels, conv_depth[-1]], stddev = stddev))
+                b_conv0 = tf.Variable(tf.zeros([conv_depth[-1]]))
+                tf.summary.histogram('W_conv0', W_conv0)
+                tf.summary.histogram('b_conv0', b_conv0)
             with tf.name_scope('Convolution_1') :
-                W_conv1 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, num_channels, conv_depth[0]], stddev = stddev))
+                W_conv1 = tf.Variable(tf.truncated_normal([conv_kernel, conv_kernel, conv_depth[-1], conv_depth[0]], stddev = stddev))
                 b_conv1 = tf.Variable(tf.zeros([conv_depth[0]]))
                 tf.summary.histogram('W_conv1', W_conv1)
                 tf.summary.histogram('b_conv1', b_conv1)
@@ -74,8 +79,13 @@ with fish_finder.as_default() :
                 b_13 = tf.Variable(tf.zeros([fc_depth[2]]))
                 tf.summary.histogram('W_13', W_13)
                 tf.summary.histogram('b_13', b_13)
+            with tf.name_scope('dense14') :
+                W_14 = tf.Variable(tf.truncated_normal([fc_depth[2], fc_depth[3]], stddev = stddev ))
+                b_14 = tf.Variable(tf.zeros([fc_depth[3]]))
+                tf.summary.histogram('W_14', W_14)
+                tf.summary.histogram('b_14', b_14)
         with tf.variable_scope('Classifier') :
-            W_clf = tf.Variable(tf.truncated_normal([fc_depth[2], num_labels], stddev = stddev))
+            W_clf = tf.Variable(tf.truncated_normal([fc_depth[3], num_labels], stddev = stddev))
             b_clf = tf.Variable(tf.zeros([num_labels]))
             tf.summary.histogram('W_clf', W_clf)
             tf.summary.histogram('b_clf', b_clf)
@@ -83,26 +93,15 @@ with fish_finder.as_default() :
 
 
     def convolutions(data) :
-        """ Function to iterate through several rounds of convolution.  An input
-        image of size 224x224x3 will have the following tensor sizes,
-        assuming conv_depth of [16, 16, 64, 64, 128, 128, 256, 256, 512, 512]:
-            * data =    224x224x3  = 150528 ->> (strided) ->> 112x112x3
-            * c1 =      112x112x32 = 401408
-            * c2 =      112x112x32 = 401408 ->> (pooled) ->> 56x56x32   = 100352
-            * c3 =      56x56x64   = 200704
-            * c4 =      56x56x64   = 200704 ->> (pooled) ->> 27x27x64   =  46656
-            * c5 =      27x27x128  =  93312
-            * c6 =      27x27x128  =  93312 ->> (pooled) ->> 13x13x128  =  21632
-            * c7 =      13x13x256  =  43264
-            * c8 =      13x13x256  =  43264 ->> (pooled) ->> 7x7x256   =   12544
-            * c9 =      7x7x512    =  25088
-            * c10 =     7x7x512    =  25088 --> (pooled) ->> 3x3x512    =   4608
-
+        """
+        Performs the convolution steps of FISHFINDER model.
         """
         with tf.name_scope('Convolution') :
-            def conv_conv_pool(data, W1, b1, W2, b2, conv_stride) :
-                """ Convenience function for iteration of conv-conv-pool
-                network architecture"""
+            def conv_conv_pool(data, W1, b1, W2, b2, conv_stride, pool_stride) :
+                """
+                Convenience function for iteration of conv-conv-pool
+                network architecture
+                """
                 i1 = tf.nn.relu(
                         tf.nn.conv2d(data, filter = W1,
                             strides = [1, conv_stride, conv_stride, 1],
@@ -117,18 +116,21 @@ with fish_finder.as_default() :
                         padding ='VALID')
                 return i1, i2
 
-            c1, c2 = conv_conv_pool(data, W_conv1, b_conv1, W_conv2, b_conv2, conv_stride)
-            c3, c4 = conv_conv_pool(c2, W_conv3, b_conv3, W_conv4, b_conv4, conv_stride)
-            c5, c6 = conv_conv_pool(c4, W_conv5, b_conv5, W_conv6, b_conv6, conv_stride)
-            c7, c8 = conv_conv_pool(c6, W_conv7, b_conv7, W_conv8, b_conv8, conv_stride)
-            c9, c10 = conv_conv_pool(c8, W_conv9, b_conv9, W_conv10, b_conv10, conv_stride)
+            c0 = tf.nn.relu(
+                    tf.nn.conv2d(data, filter = W_conv0,
+                        strides = [1, 2, 2, 1],
+                        padding = 'SAME') + b_conv0)
+            c1, c2 = conv_conv_pool(c0, W_conv1, b_conv1, W_conv2, b_conv2, conv_stride, pool_stride[0])
+            c3, c4 = conv_conv_pool(c2, W_conv3, b_conv3, W_conv4, b_conv4, conv_stride, pool_stride[0])
+            c5, c6 = conv_conv_pool(c4, W_conv5, b_conv5, W_conv6, b_conv6, conv_stride, pool_stride[0])
+            c7, c8 = conv_conv_pool(c6, W_conv7, b_conv7, W_conv8, b_conv8, conv_stride, pool_stride[0])
+            c9, c10 = conv_conv_pool(c8, W_conv9, b_conv9, W_conv10, b_conv10, conv_stride, pool_stride[1])
+
         return c10
 
     def dense_layers(data, drop_prob) :
-        """Executes a series of dense layers.  Tensor sizes :
-            * fc11 =    4608 -> 1024
-            * fc12 =    1024 ->  512
-            * fc13 =    512  -> 256
+        """
+        Executes a series of dense layers.
         """
         def fc(data, W, b) :
             """Convenience function for dense layer with dropout"""
@@ -141,7 +143,8 @@ with fish_finder.as_default() :
         d11 = fc(data, W_11, b_11)
         d12 = fc(d11, W_12, b_12)
         d13 = fc(d12, W_13, b_13)
-        return d13
+        d14 = fc(d13, W_14, b_14)
+        return d14
 
 
 
@@ -149,8 +152,10 @@ with fish_finder.as_default() :
     with tf.name_scope('Training') :
         with tf.name_scope('Input') :
             train_images = tf.placeholder(tf.float32, shape = [batch_size, fov_size, fov_size, num_channels])
-            train_labels = tf.placeholder(tf.int32, shape = [batch_size, num_labels])
+            train_labels = tf.placeholder(tf.float32, shape = [batch_size, num_labels])
             learning_rate = tf.placeholder(tf.float32, shape = () )
+            beta_weights = tf.placeholder(tf.float32, shape = () )
+            frequency_weights = tf.placeholder(tf.float32, shape = [1, num_labels])
         with tf.name_scope('Network') :
             conv_output = convolutions(train_images)
             dense_input = tf.contrib.layers.flatten(conv_output)
@@ -158,8 +163,13 @@ with fish_finder.as_default() :
         with tf.name_scope('Classifier') :
             logits = tf.matmul(dense_output, W_clf) + b_clf
         with tf.name_scope('Backpropigation') :
-            cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits = logits, labels = train_labels))
-            train_op = tf.train.MomentumOptimizer(learning_rate, 0.9).minimize(cross_entropy)
+            weight_per_label = beta_weights*tf.transpose(tf.matmul(train_labels, tf.transpose(frequency_weights)))
+            xent = tf.nn.softmax_cross_entropy_with_logits(
+                        logits = logits, labels = train_labels)
+            cross_entropy = tf.reduce_mean(xent)
+            cost = cross_entropy + tf.reduce_mean(tf.mul(weight_per_label, xent)) # penalty weights for unbalanced data - penalizes for missing underrepresented labels to force model to pay attention to them 
+
+            train_op = tf.train.AdagradOptimizer(learning_rate).minimize(cost)
 
     with tf.name_scope('Staged_prediction') :
         with tf.name_scope('Input') :
@@ -169,10 +179,12 @@ with fish_finder.as_default() :
             staged_dense_input = tf.contrib.layers.flatten(staged_conv_output)
             staged_dense_output = dense_layers(staged_dense_input, drop_prob = 1.0)
         with tf.name_scope('Prediction') :
-            staged_logits = tf.matmul(staged_dense_output, W_clf) + b_clf
+            staged_logits = tf.nn.softmax(tf.matmul(staged_dense_output, W_clf) + b_clf)
 
 
     with tf.name_scope('Summaries') :
         tf.summary.scalar('Cross_entropy', cross_entropy)
+        tf.summary.scalar('Cost', cost)
+        tf.summary.scalar('beta_weights', beta_weights)
         tf.summary.scalar('Learning_rate', learning_rate)
         summaries = tf.summary.merge_all()
