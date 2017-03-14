@@ -342,17 +342,20 @@ def fovea_generation(image_dictionary, num_fovea = 100, fov_size = 224) :
 
 def stage_set_supervisor(stgd_lgts, staged_dictionary, training_set_dictionary, keys, label_dict, reverse_label_dict) :
     """
-    Fn will destage, keep staged, or commit fovea from the stage dictionary based on set of criteria :
-        * Destage
-            * None of the softmax logit labels were predicted with confidence exceeding some threshold
-            * Predicted an impossible fovea label (i.e. 'ALB' for a high-resolution image of a 'NoF')
-                * Note : It is okay to predict 'NoF' fovea from a high-resolution with a fish label
-        * Remain in stage_dictionary
-            * label is predicted with a confidence that exceeds the threshold set
-            * label is not impossible
-            * prediction has not yet exceeded the stability requirement for commitment to training set
-        * Commit to training set
-            * fovea has remained in the stage_dictionary for greater than a threshold of epochs, indicating stability in the model prediction
+    This function manages the dictionaries that contain the training and
+    staged sets of fovea.  After random fovea are added to the staged set, and run
+    through the current FISHFINDER model for label prediction, this fn will
+    destage, keep, or commit the fovea to the training_set_dictionary.
+
+    Each high-resolution image that contains a fish is composed of fovea that
+    are either depict NoF or depict the fish. Because labels exist for all of the
+    training set of high-resolution images, this function will utilize the predicted
+    probabilities that the fovea either contains no fish, and thus the fovea label is
+    set to 'NoF', or contains some type of fish, in which case the image label would be
+    propigated to the fovea label.
+
+    A series of conditions will ensure that fovea are not incorrectly labeled and
+    committed automatically to the growing training set.
 
     """
     for i, key in enumerate(keys) :
@@ -360,24 +363,44 @@ def stage_set_supervisor(stgd_lgts, staged_dictionary, training_set_dictionary, 
         keep_threshold = float(open('keep_threshold.txt', 'r').read().strip())
         commit_threshold = open('commit_threshold.txt', 'r').read().strip()
 
+        fish_prob = np.sum(pred) - pred[4]
+        nof_prob = pred[4]
 
-        if pred[np.argmax(pred)] < keep_threshold :
+        if fish_prob < keep_threshold and nof_prob < keep_threshold :
             keep = False
-        else : # high confidence prediction has been made
-            # Does prediction match possible outcomes based on the high-resolution label?
+        else : # high enough confidence prediction has been made
+
+            # Is the predicted fovea label possible?
+            #   * NoF is always possible
+            #   * any fish is not a possible fovea label for NoF image label
+            #   * TEST images can have any label
+
             NoF_bool = np.argmax(pred) == 4
-            label_bool = np.argmax(pred) == np.argmax(label_dict.get(staged_dictionary[key].get('image_label')))
-            if label_bool :
-                if staged_dictionary[key].get('fovea_label') != None :
-                    label_bool = (staged_dictionary[key].get('fovea_label') == reverse_label_dict.get(np.argmax(pred)))
+
+            # cannot predict a fish in 'NoF' images
+            if fish_prob >= keep_threshold :
+                fish_bool = (staged_dictionary[key].get('image_label') != 'NoF') # fish was predicted and image label is NoF ;
+            else :
+                fish_bool = False # fish was predicted but image label was NoF.  not a legitimate prediction
+
+            # keep all high confidence prediction fovea from the TEST set
+
             test_bool = staged_dictionary[key].get('image_label') == 'TEST'
-            if np.any([NoF_bool, label_bool, test_bool]) :
+
+            if np.any([NoF_bool, fish_bool, test_bool]) :
                 keep = True
             else :
                 keep = False
 
         if keep :
-            staged_dictionary[key]['fovea_label'] = reverse_label_dict.get(np.argmax(pred))
+            if test_bool :
+                staged_dictionary[key]['fovea_label'] = reverse_label_dict.get(np.argmax(pred))
+            # if the image label is known and fovea is predicted as a fish, propigate the image label as the fovea label
+            elif fish_bool  :
+                staged_dictionary[key]['fovea_label'] = staged_dictionary[key].get('image_label')
+            elif NoF_bool :
+                staged_dictionary[key]['fovea_label'] = 'NoF'
+
             staged_dictionary.get(key)['staged_steps'] += 1
 
             if commit_threshold == 'Manual' :
@@ -403,7 +426,7 @@ def manual_stage_manager(staged_dictionary, training_set_dictionary, fovea_size,
     """
 
     keys = [key for key in staged_dictionary]
-
+    correct_count, missed_fish, missed_NoF, ambig_count = 0, 0, 0, 0
     for key in keys :
         fov_dict = staged_dictionary.get(key)
         if fov_dict['staged_steps'] >= stage_step_threshold :
@@ -424,26 +447,38 @@ def manual_stage_manager(staged_dictionary, training_set_dictionary, fovea_size,
                 print("Auto commit triggered!")
                 commit = 'c'
             elif (fov_dict.get('image_label') == 'TEST') :
-                commit = input("Correct, commit : c; Incorrect, destage: d       Answer: ")
+                commit = input("Correct, commit : c; Incorrect, overide with 'NoF' : n, Incorrect, destage: d       Answer: ")
             else :
-                commit = input("Correct, commit : c; Incorrect, commit as fish: f, Incorrect, destage: d       Answer: ")
+                commit = input("Correct, commit : c; Incorrect, overide as fish: f, Incorrect, overide as 'NoF': n,  Incorrect, destage: d       Answer: ")
 
             if commit == 'c' :
                 new_key = key+';_yx_'+str(y_off)+'_'+str(x_off)
                 dict_to_add = {new_key: fov_dict}
                 training_set_dictionary.update(dict_to_add)
                 _ = staged_dictionary.pop(key)
+                correct_count += 1
             elif commit == 'f' :
                 fov_dict['fovea_label'] = fov_dict['image_label']
                 new_key = key+';_yx_'+str(y_off)+'_'+str(x_off)
                 dict_to_add = {new_key: fov_dict}
                 training_set_dictionary.update(dict_to_add)
                 _ = staged_dictionary.pop(key)
+                missed_fish += 1
+            elif commit == 'n' :
+                fov_dict['fovea_label'] = 'NoF'
+                new_key = key+';_yx_'+str(y_off)+'_'+str(x_off)
+                dict_to_add = {new_key: fov_dict}
+                training_set_dictionary.update(dict_to_add)
+                _ = staged_dictionary.pop(key)
+                missed_NoF += 1
 
             elif commit == 'd' :
                 _ = staged_dictionary.pop(key)
+                ambig_count += 1
 
             else :
                 pass
     print("\n\nNew size of training_set_dictionary: {}".format(len(training_set_dictionary)))
     print("New size of staged_set_dictionary: {}".format(len(staged_dictionary)))
+
+    print("\nBatch Accuracy: {}".format(correct_count / np.sum([correct_count, missed_fish, missed_NoF])))
