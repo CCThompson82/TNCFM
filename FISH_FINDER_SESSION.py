@@ -95,7 +95,7 @@ with tf.Session(graph = fish_finder) as session :
             total_fovea += batch_size
 
         new_fovea_dict = fd.fovea_generation(image_dictionary, num_fovea = num_fovea,
-                                                fov_size = fov_size, scale_min = 0.4, scale_max = 0.8)
+                                                fov_size = fov_size, scale_min = 0.4, scale_max = 1.4)
 
 
         if epochs_completed == 0 :

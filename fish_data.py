@@ -81,7 +81,7 @@ def make_coordinates_dict(filename_list, resize_val = 1.0, presize = 256, bins =
              # TODO : assert fd.make_labels receives a list in fish_data.py
             img_dict = {f: {'label': make_labels([f])}}
 
-            img = misc.imresize(misc.imread(f, mode = 'RGB'), size = resize_val)
+            img = misc.imresize(misc.imread(f, mode = 'RGB'), size = resize_val, mode = 'RGB')
             y, x, _ = img.shape
 
             max_y = y - presize
@@ -288,7 +288,8 @@ def prepare_batch(dictionary, set_list, batch_size, fov_size, label_dictionary, 
         y_off, x_off = f_dict['coordinates']['y_offset'], f_dict['coordinates']['x_offset']
         fovea = misc.imresize(
                         misc.imread(f, mode = 'RGB'),
-                            size = scale)[y_off:(y_off+fov_size), x_off:(x_off+fov_size), :]
+                            size = scale,
+                            mode = 'RGB')[y_off:(y_off+fov_size), x_off:(x_off+fov_size), :]
         fovea = np.expand_dims(process_fovea(fovea, pixel_norm = 'standard', mutation = True), 0)
         label = np.expand_dims(label_dictionary.get(f_dict['fovea_label']),0) # TODO : refactor so that label return is callable.  Label not necessary for stage fovea call
 
@@ -332,7 +333,7 @@ def fovea_generation(image_dictionary, num_fovea = 100, fov_size = 224, scale_mi
     while len(samples_f_list) > 0 :
         f = samples_f_list.pop(np.random.randint(0,len(samples_f_list)))
         scale = random_float_from_range(a_min = scale_min, a_max = scale_max)
-        shape = misc.imresize(misc.imread(f, mode = 'RGB'), size = scale).shape
+        shape = misc.imresize(misc.imread(f, mode = 'RGB'), size = scale, mode = 'RGB').shape
         y_offset = np.random.randint(0, shape[0]-fov_size, 1)[0]
         x_offset = np.random.randint(0, shape[1]-fov_size, 1)[0]
 
@@ -443,7 +444,9 @@ def manual_stage_manager(staged_dictionary, training_set_dictionary, fovea_size,
             x_off = int(fov_dict.get('coordinates').get('x_offset'))
             fov = (misc.imresize(
                         misc.imread(
-                            fov_dict.get('f')), size = scale)[y_off:(y_off+fovea_size),
+                            fov_dict.get('f')),
+                            size = scale,
+                            mode = 'RGB')[y_off:(y_off+fovea_size),
                                                               x_off:(x_off+fovea_size), :])
             show_panel(fov)
 
