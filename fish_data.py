@@ -315,7 +315,7 @@ def prepare_batch(dictionary, set_list, batch_size, fov_size, label_dictionary, 
     else :
         return X_batch, keys
 
-def fovea_generation(image_dictionary, num_fovea = 100, fov_size = 224) :
+def fovea_generation(image_dictionary, num_fovea = 100, fov_size = 224, scale_min = 0.4, scale_max = 1.0) :
     """
     Function for random sampling of high-resolution image files, followed by
     random fovea generation.
@@ -324,9 +324,14 @@ def fovea_generation(image_dictionary, num_fovea = 100, fov_size = 224) :
     f_list = [x for x in image_dictionary]
     samples_f_list = np.random.choice(f_list, num_fovea).tolist()
 
+    def random_float_from_range(a_min, a_max) :
+        """Convenience function for the sampling of a uniform distribution of a specific range."""
+        z = a_max - a_min
+        return z * np.random.rand() + a_min
+
     while len(samples_f_list) > 0 :
         f = samples_f_list.pop(np.random.randint(0,len(samples_f_list)))
-        scale = 0.4 * np.random.rand() + 0.4
+        scale = random_float_from_range(a_min = scale_min, a_max = scale_max)
         shape = misc.imresize(misc.imread(f, mode = 'RGB'), size = scale).shape
         y_offset = np.random.randint(0, shape[0]-fov_size, 1)[0]
         x_offset = np.random.randint(0, shape[1]-fov_size, 1)[0]
