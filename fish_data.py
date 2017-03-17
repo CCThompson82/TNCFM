@@ -490,3 +490,50 @@ def manual_stage_manager(staged_dictionary, training_set_dictionary, fovea_size,
     print("New size of staged_set_dictionary: {}".format(len(staged_dictionary)))
 
     print("\nBatch Accuracy: {}".format(correct_count / np.sum([correct_count, missed_fish, missed_NoF])))
+
+
+def format_pred_arr(f, fov_size = 224, scale = [1.5, 1.0, 0.5], y_bins = 10, x_bins = 10) :
+    """
+    Converts a high-resolution RGB image into an array stack for fovea prediction
+    in the FISHFINDER model.
+    """
+
+    def stride_hack(length, kernel, bins) :
+        """
+        Calculates the kernel start locations for a definied number of bins with valid padding.
+        """
+        a_max = length - kernel
+        if bins == 'all' :
+            bins = a_max
+        base_stride = a_max // bins
+        stride_remainder = a_max % bins
+        hack = np.ones([stride_remainder+1]).tolist()
+        hack += np.zeros([1+bins - len(hack)]).tolist()
+
+        cursor = 0
+        ret_vec = []
+        while cursor <= a_max :
+            ret_vec.append(cursor)
+            jitter = int(hack.pop(np.random.randint(0,len(hack))))
+            cursor += base_stride + jitter
+        return ret_vec
+
+    arr_list = []
+    for s in scale :
+        img = misc.imresize(misc.imread(f, mode = 'RGB'), scale = s, mode = 'RGB')
+
+        y_max, x_max, d = img.shape
+
+        y_locs = stride_hack(y_max, kernel = fov_size, bins = y_bins)
+        x_locs = stride_hack(x_max, kernel = fov_size, bins = x_bins)
+
+        arr = np.zeros([y_bins*x_bins, fov_size, fov_size, num_channels])
+        counter = 0
+        for y in y_locs :
+            for x in x_locs :
+                fov = np.expand_dims(img[y:(y+fov_size), x:(x+fov_size), :], 0)
+                arr.ix[counter, :, :, :] = fov
+                counter +=1
+        arr_list.append(arr)
+
+    return arr_list 

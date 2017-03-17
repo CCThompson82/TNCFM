@@ -167,7 +167,7 @@ with fish_finder.as_default() :
             xent = tf.nn.softmax_cross_entropy_with_logits(
                         logits = logits, labels = train_labels)
             cross_entropy = tf.reduce_mean(xent)
-            cost = cross_entropy + tf.reduce_mean(tf.mul(weight_per_label, xent)) # penalty weights for unbalanced data - penalizes for missing underrepresented labels to force model to pay attention to them 
+            cost = cross_entropy + tf.reduce_mean(tf.mul(weight_per_label, xent)) # penalty weights for unbalanced data - penalizes for missing underrepresented labels to force model to pay attention to them
 
             train_op = tf.train.AdagradOptimizer(learning_rate).minimize(cost)
 
@@ -188,3 +188,14 @@ with fish_finder.as_default() :
         tf.summary.scalar('beta_weights', beta_weights)
         tf.summary.scalar('Learning_rate', learning_rate)
         summaries = tf.summary.merge_all()
+
+
+    with tf.name_scope('Prediction') :
+        with tf.name_scope('Input') :
+            img_stack = tf.placeholder(tf.float32, shape = [bin_y*bin_x, fov_size, fov_size, num_channels])
+        with tf.name_scope('Network') :
+            stack_conv_output = convolutions(img_stack)
+            stack_dense_input = tf.contrib.layers.flatten(stack_conv_output)
+            stack_dense_output = dense_layers(stack_dense_input, drop_prob = 1.0)
+        with tf.name_scope('Classifier') :
+            stack_prediction = tf.nn.softmax(tf.matmul(dense_output, W_clf) + b_clf)
