@@ -192,7 +192,7 @@ with fish_finder.as_default() :
 
     with tf.name_scope('Prediction') :
         with tf.name_scope('Input') :
-            img_stack = tf.placeholder(tf.float32, shape = [bin_y*bin_x, fov_size, fov_size, num_channels])
+            img_stack = tf.placeholder(tf.float32, shape = [bins_y*bins_x, fov_size, fov_size, num_channels])
         with tf.name_scope('Network') :
             stack_conv_output = convolutions(img_stack)
             stack_dense_input = tf.contrib.layers.flatten(stack_conv_output)
