@@ -497,6 +497,8 @@ def format_pred_arr(f, fov_size = 224, scale = [1.5, 1.0, 0.5], y_bins = 10, x_b
     Converts a high-resolution RGB image into an array stack for fovea prediction
     in the FISHFINDER model.
     """
+    global num_channels
+    num_channels = 3
 
     def stride_hack(length, kernel, bins) :
         """
@@ -505,14 +507,15 @@ def format_pred_arr(f, fov_size = 224, scale = [1.5, 1.0, 0.5], y_bins = 10, x_b
         a_max = length - kernel
         if bins == 'all' :
             bins = a_max
-        base_stride = a_max // bins
-        stride_remainder = a_max % bins
-        hack = np.ones([stride_remainder+1]).tolist()
-        hack += np.zeros([1+bins - len(hack)]).tolist()
+        base_stride = a_max // (bins - 1)
+        stride_remainder = a_max % (bins - 1)
+        #assert stride_remainder < bins, 'ERROR'
+        hack = np.ones([stride_remainder]).tolist()
+        hack += np.zeros([bins - len(hack)]).tolist()
 
         cursor = 0
         ret_vec = []
-        while cursor <= a_max :
+        while len(ret_vec) < bins :
             ret_vec.append(cursor)
             jitter = int(hack.pop(np.random.randint(0,len(hack))))
             cursor += base_stride + jitter
@@ -520,20 +523,22 @@ def format_pred_arr(f, fov_size = 224, scale = [1.5, 1.0, 0.5], y_bins = 10, x_b
 
     arr_list = []
     for s in scale :
-        img = misc.imresize(misc.imread(f, mode = 'RGB'), scale = s, mode = 'RGB')
+        img = misc.imresize(misc.imread(f, mode = 'RGB'), size = s, mode = 'RGB')
 
         y_max, x_max, d = img.shape
 
         y_locs = stride_hack(y_max, kernel = fov_size, bins = y_bins)
         x_locs = stride_hack(x_max, kernel = fov_size, bins = x_bins)
 
-        arr = np.zeros([y_bins*x_bins, fov_size, fov_size, num_channels])
+        arr = np.zeros([(y_bins*x_bins), fov_size, fov_size, num_channels])
         counter = 0
         for y in y_locs :
             for x in x_locs :
                 fov = np.expand_dims(img[y:(y+fov_size), x:(x+fov_size), :], 0)
-                arr.ix[counter, :, :, :] = fov
+                fov_s = process_fovea(fov)
+                arr[counter, :, :, :] = fov_s
+
                 counter +=1
         arr_list.append(arr)
 
-    return arr_list 
+    return arr_list

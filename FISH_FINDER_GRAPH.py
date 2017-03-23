@@ -198,4 +198,17 @@ with fish_finder.as_default() :
             stack_dense_input = tf.contrib.layers.flatten(stack_conv_output)
             stack_dense_output = dense_layers(stack_dense_input, drop_prob = 1.0)
         with tf.name_scope('Classifier') :
-            stack_prediction = tf.nn.softmax(tf.matmul(dense_output, W_clf) + b_clf)
+            stack_prediction = tf.nn.softmax(tf.matmul(stack_dense_output, W_clf) + b_clf)
+
+        fish_fov = tf.constant(np.expand_dims(fish, 0), dtype = tf.float32)
+        nof_fov = tf.constant(np.expand_dims(nof,0), dtype = tf.float32)
+
+        f1 = convolutions(fish_fov)
+        f2 = tf.contrib.layers.flatten(f1)
+        f3 = dense_layers(f2, drop_prob = 1.0)
+        fp =  tf.nn.softmax(tf.matmul(f3, W_clf) + b_clf)
+
+        n1 = convolutions(nof_fov)
+        n2 = tf.contrib.layers.flatten(n1)
+        n3 = dense_layers(n2, drop_prob = 1.0)
+        nofp =  tf.nn.softmax(tf.matmul(n3, W_clf) + b_clf)

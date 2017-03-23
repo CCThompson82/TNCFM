@@ -29,7 +29,7 @@ reverse_label_dict = { 0 : 'ALB',
 conv_kernel = 3
 conv_stride = 1
 
-conv_depth = [16, 16, 32, 32, 64, 64, 128, 128, 256, 256, 8]  # TODO : Refactor this into the correct order 
+conv_depth = [16, 16, 32, 32, 64, 64, 128, 128, 256, 256, 8]  # TODO : Refactor this into the correct order
 
 # Pooling
 pool_kernel = 3
@@ -44,4 +44,4 @@ drop_prob = 0.65 # TODO refactor to a more accurate term of keep prob
 
 # Predictions
 bins_y = 10
-bins_x = 10
+bins_x = 15
