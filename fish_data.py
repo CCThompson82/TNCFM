@@ -55,6 +55,21 @@ def show_panel(image) :
     plt.show()
 
 
+def retrieve_fovea(key, fovea_dictionary) :
+    """
+    Retrieves a fovea from the fovea_dictionary.
+    """
+    fov_dict = fovea_dictionary.get(key)
+    scale = fov_dict.get('scale')
+    f = fov_dict.get('f')
+    y_off = fov_dict.get('y_offset')
+    x_off = fov_dict.get('x_offset')
+
+    fov = misc.imresize(
+            misc.imload(f, mode = 'RGB'),
+            size = scale, mode = 'RGB')[y_off:(y_0ff+fov_size), x_off:(x_off+fov_size), :]
+    return fov
+
 
 
 def process_fovea(fovea, pixel_norm = 'standard', mutation = False) :
@@ -191,6 +206,7 @@ def annote_fovea_manager(f, image_dictionary, fovea_dictionary, validation_dicti
     valid_stage = {}
     fish_stage = {}
     for s in scale :
+
         print("Scale: {}".format(s))
         img = misc.imresize(misc.imread(f, mode = 'RGB'), size = s, mode = 'RGB')
 
@@ -224,83 +240,46 @@ def annote_fovea_manager(f, image_dictionary, fovea_dictionary, validation_dicti
 
         nof_dict = {}
         fish_dict = {}
-        valid_dict = {}
+
         for i in range(arr.shape[0]) :
             nof_dict[i] = {'f' : f, 'scale' : s, 'y_offset' : y_locs[i // x_bins], 'x_offset' : x_locs[i % x_bins], 'fov_label' : 'NoF' }
 
-        fish_list = input('Contain fish?     ')
-        complex_list = input('Complex fovea     ')
-        ambiguous_list = input('Ambiguous fovea?   ')
+        if hr_lab == 'NoF' :
+            pass
+        else :
+            fish_list = input('Stage to fish    ')
+            fi_list = fish_list.split(',')
 
-        amb_list = ambiguous_list.split(',')
-        comp_list = complex_list.split(',')
-        fi_list = fish_list.split(',')
+            if fi_list != ['']:
+                for fi in fi_list :
+                    nof_dict[int(fi.strip())]['fov_label'] = image_dictionary.get('train').get(f).get('image_label') #change the fovea_label based on the image_label
+                    fish_dict[f+'_'+str(np.random.random())] = nof_dict.pop(int(fi.strip()))
 
-        if amb_list != [''] :
-            for amb in amb_list :
-                _ = nof_dict.pop(int(amb.strip()))  #get rid of all ambigous fovea
-
-        if comp_list != [''] :
-            for ci in comp_list :
-                nof_dict[int(ci.strip())]['fov_label'] = image_dictionary.get('train').get(f).get('image_label') #change the fovea_label based on the image_label
-                valid_dict[f+'_'+str(np.random.random())] = nof_dict.pop(int(ci.strip())) # pop fovea entry from nof in to the valid_dict with a unique key
-        if fi_list != ['']:
-            for fi in fi_list :
-                nof_dict[int(fi.strip())]['fov_label'] = image_dictionary.get('train').get(f).get('image_label') #change the fovea_label based on the image_label
-                fish_dict[f+'_'+str(np.random.random())] = nof_dict.pop(int(fi.strip()))
-
+        fish_stage.update(fish_dict)
         for n in nof_dict :
             nof_stage.update({ nof_dict.get(n).get('f')+'_'+str(np.random.random()) : nof_dict.get(n) } )
-        fish_stage.update(fish_dict)
-        valid_stage.update(valid_dict)
 
 
 
-    print(hr_lab)
 
-
-    if len(fish_stage) > 0 :
-        for fi in fish_stage :
-            c_dict = fish_stage.get(fi)
-            y = c_dict.get('y_offset')
-            x = c_dict.get('x_offset')
-            show_panel(misc.imresize(misc.imread(c_dict.get('f')), size = c_dict.get('scale'))[y:y+fov_size, x:x+fov_size, :])
-
-        commit = input('Commit images as {} to training set? (y/n)'.format(hr_lab))
-        if commit == 'y' :
-            fovea_dictionary.get(hr_lab).update(fish_stage)
-    else :
-        print("No Fovea to commit to training set")
-
-
-    if len(valid_stage) > 0  :
-        for vi in valid_stage :
-            c_dict = valid_stage.get(vi)
-            y = c_dict.get('y_offset')
-            x = c_dict.get('x_offset')
-            show_panel(misc.imresize(misc.imread(c_dict.get('f')), size = c_dict.get('scale'))[y:y+fov_size, x:x+fov_size, :])
-
-        commit = input('Commit images as {} to valid set? (y/n)'.format(hr_lab))
-        if commit == 'y' :
-            validation_dictionary.get(hr_lab).update(valid_stage)
-    else :
-        print("No validation fovea to commit")
-
-
-    fovea_dictionary.get('NoF').update(nof_stage)
-
-
-    print("Updated Fovea Training Set")
-    for fish_class in fovea_dictionary :
-        print("{} : {} images".format(fish_class, len(fovea_dictionary.get(fish_class))))
-    print("\nUpdated Fovea Validation Set")
-    for fish_class in validation_dictionary :
-        print("{} : {} images".format(fish_class, len(validation_dictionary.get(fish_class))))
-
-    master_commit = input("commit to version directory master dictionaries?  (y/n)     ")
+    master_commit = input("commit to version directory master fovea or validation dictionary?  (y/n/v)     ")
     if master_commit == 'y' :
+
+        print("Updated Fovea Training Set")
+        fovea_dictionary.get(hr_lab).update(fish_stage)
+        fovea_dictionary.get('NoF').update(nof_stage)
+        for fish_class in fovea_dictionary :
+            print("{} : {} images".format(fish_class, len(fovea_dictionary.get(fish_class))))
+
         with open(verdir+'/fovea_dictionary.pickle', 'wb') as ffd :
             pickle.dump(fovea_dictionary, ffd)
+    if master_commit == 'v' :
 
-        with open(verdir+'/validation_dictionary.pickle', 'wb') as fvd :
-            pickle.dump(validation_dictionary, fvd)
+        print("Updated Validation Training Set")
+        validation_dictionary.get(hr_lab).update(fish_stage)
+        if hr_lab == 'NoF' :
+            validation_dictionary.get('NoF').update(nof_stage)
+        for fish_class in validation_dictionary :
+            print("{} : {} images".format(fish_class, len(validation_dictionary.get(fish_class))))
+        with open(verdir+'/validation_dictionary.pickle', 'wb') as ffd :
+            pickle.dump(validation_dictionary, ffd)
