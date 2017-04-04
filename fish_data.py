@@ -55,21 +55,20 @@ def show_panel(image) :
     plt.show()
 
 
-def retrieve_fovea(key, fovea_dictionary) :
+def retrieve_fovea(key, epoch_dictionary, fov_size, label_dict) :
     """
-    Retrieves a fovea from the fovea_dictionary.
+    Retrieves a fovea from the epoch_dictionary.
     """
-    fov_dict = fovea_dictionary.get(key)
+    fov_dict = epoch_dictionary.get(key)
     scale = fov_dict.get('scale')
-    f = fov_dict.get('f')
+    f = fov_dict.get('f') # provides actual path to high-resolution image
     y_off = fov_dict.get('y_offset')
     x_off = fov_dict.get('x_offset')
 
     fov = misc.imresize(
-            misc.imload(f, mode = 'RGB'),
-            size = scale, mode = 'RGB')[y_off:(y_0ff+fov_size), x_off:(x_off+fov_size), :]
-    return fov
-
+            misc.imread(f, mode = 'RGB'),
+            size = scale, mode = 'RGB')[y_off:(y_off+fov_size), x_off:(x_off+fov_size), :]
+    return fov, label_dict.get(fov_dict.get('fov_label'))
 
 
 def process_fovea(fovea, pixel_norm = 'standard', mutation = False) :
@@ -86,11 +85,7 @@ def process_fovea(fovea, pixel_norm = 'standard', mutation = False) :
             * random flip up down
             * random rotation 90 degrees
             * TODO : random colour adjustment
-
-    Pixel value normalization is under development.
-
     """
-
     if mutation :
         if np.random.randint(0,2,1) == 1 :
             fovea = np.fliplr(fovea)
@@ -99,30 +94,32 @@ def process_fovea(fovea, pixel_norm = 'standard', mutation = False) :
         if np.random.randint(0,2,1) == 1 :
             fovea = np.rot90(fovea)
 
-
     #pixel normalization
     if pixel_norm == 'standard' :
         fovea = fovea.astype(np.float32)
         fovea = (fovea / 255.0) - 0.5
     elif pixel_norm == 'float' :
         fovea = fovea.astype(np.float32)
-        fovea = (fovea / 256.0)
+        fovea = (fovea / 255.0)
         fovea = np.clip(fovea, a_min = 0.0, a_max = 1.0)
     elif pixel_norm == 'centre' :
+        red = 96.48265253757386
+        green = 107.20367931267522
+        blue = 99.97448662926035
         fovea = fovea.astype(np.float32)
-        fovea = (fovea - 128.0)  # TODO : use sklearn to set mean equal to zero?
+        fovea[:, :, 0] = fovea[:, :, 0] - red
+        fovea[:, :, 1] = fovea[:, :, 1] - green
+        fovea[:, :, 2] = fovea[:, :, 2] - blue
     else :
         pass
-
     return fovea
 
 
 def generate_fovea(f, fov_size = 224, scale = [2.0, 1.0, 0.5], y_bins = 10, x_bins = 10, pixel_norm = 'standard') :
     """
-    Converts a high-resolution RGB image into an array stack for fovea prediction
+    Converts a filename to high-resolution RGB image into an array stack for fovea prediction
     in the FISHFINDER model.
     """
-    global num_channels
     num_channels = 3
 
     def stride_hack(length, kernel, bins) :
@@ -166,7 +163,7 @@ def generate_fovea(f, fov_size = 224, scale = [2.0, 1.0, 0.5], y_bins = 10, x_bi
                 counter +=1
         arr_list.append(arr)
 
-    return arr_list
+    return arr_list # list of fov_stack arrays for each scale in scale_list
 
 
 
@@ -176,7 +173,6 @@ def annote_fovea_manager(f, image_dictionary, fovea_dictionary, validation_dicti
     Converts a high-resolution RGB image into an array stack for fovea prediction
     in the FISHFINDER model.
     """
-    global num_channels
     num_channels = 3
 
     def stride_hack(length, kernel, bins) :
@@ -283,3 +279,112 @@ def annote_fovea_manager(f, image_dictionary, fovea_dictionary, validation_dicti
             print("{} : {} images".format(fish_class, len(validation_dictionary.get(fish_class))))
         with open(verdir+'/validation_dictionary.pickle', 'wb') as ffd :
             pickle.dump(validation_dictionary, ffd)
+
+
+def generate_epoch_dictionary(fovea_dictionary) :
+    """
+    Assuming balanced addition of fovea to the training fovea_dictionary,
+    generates a key list for
+    """
+    fish_counts = []
+    for key in fovea_dictionary.keys() :
+        if key != 'NoF' :
+            fish_counts.append(len(fovea_dictionary.get(key)))
+    #print(fish_counts)
+    nof_num = np.max(fish_counts)
+
+    epoch_dictionary = {}
+    for key in fovea_dictionary.keys() :
+        if key == 'NoF' :
+            nof_key_list = np.random.choice(list(fovea_dictionary.get(key).keys()), nof_num)
+            for nof_key in nof_key_list :
+                epoch_dictionary.update({nof_key : fovea_dictionary['NoF'].get(nof_key)})
+        else :
+            epoch_dictionary.update(fovea_dictionary.get(key))
+
+    return(epoch_dictionary, list(epoch_dictionary.keys()))
+
+
+def generate_batch(batch_key_list, epoch_dictionary, fov_size, label_dict) :
+    """
+    Generates an array of fovea images with corresponding one-hot encoded label
+    array based on a batch_key_list.
+    """
+
+    def retrieve_fovea(key, epoch_dictionary = epoch_dictionary, fov_size = fov_size, label_dict = label_dict) :
+        """
+        Retrieves a fovea from the epoch_dictionary.
+        """
+        fov_dict = epoch_dictionary.get(key)
+        scale = fov_dict.get('scale')
+        f = fov_dict.get('f') # provides actual path to high-resolution image
+        y_off = fov_dict.get('y_offset')
+        x_off = fov_dict.get('x_offset')
+
+        fov = misc.imresize(
+                misc.imread(f, mode = 'RGB'),
+                size = scale, mode = 'RGB')[y_off:(y_off+fov_size), x_off:(x_off+fov_size), :]
+        return fov, label_dict.get(fov_dict.get('fov_label'))
+
+
+    def process_fovea(fovea, pixel_norm = 'standard', mutation = False) :
+        """
+        Fn preprocesses a single fovea array.
+
+        If mutation == True, modifications to input images will be made, each with 0.5
+        probability:
+
+            * smallest dimension resized to standard height and width supplied in size param
+            * each channel centered to mean near zero.  Deviation is not normalized.
+            * if mutate == True :
+                * random flip left right
+                * random flip up down
+                * random rotation 90 degrees
+                * TODO : random colour adjustment
+
+        Pixel value normalization is under development.
+
+        """
+        if mutation :
+            if np.random.randint(0,2,1) == 1 :
+                fovea = np.fliplr(fovea)
+            if np.random.randint(0,2,1) == 1 :
+                fovea = np.flipud(fovea)
+            if np.random.randint(0,2,1) == 1 :
+                fovea = np.rot90(fovea)
+
+        #pixel normalization
+        if pixel_norm == 'standard' :
+            fovea = fovea.astype(np.float32)
+            fovea = (fovea / 255.0) - 0.5
+        elif pixel_norm == 'float' :
+            fovea = fovea.astype(np.float32)
+            fovea = (fovea / 255.0)
+            fovea = np.clip(fovea, a_min = 0.0, a_max = 1.0)
+        elif pixel_norm == 'centre' :
+            red = 96.48265253757386
+            green = 107.20367931267522
+            blue = 99.97448662926035
+            fovea = fovea.astype(np.float32)
+            fovea[:, :, 0] = fovea[:, :, 0] - red
+            fovea[:, :, 1] = fovea[:, :, 1] - green
+            fovea[:, :, 2] = fovea[:, :, 2] - blue
+        else :
+            pass
+        return fovea
+
+
+    for key in batch_key_list :
+        fovea, label = retrieve_fovea(key, epoch_dictionary, fov_size = fov_size, label_dict = label_dict)
+
+
+        fovea = process_fovea(fovea, pixel_norm = 'centre', mutation = True)
+
+        try :
+            foveae = np.concatenate([foveae, np.expand_dims(fovea, 0)], 0)
+            labels = np.concatenate([labels, np.expand_dims(label, 0)], 0)
+        except :
+            foveae = np.expand_dims(fovea, 0)
+            labels = np.expand_dims(label, 0)
+
+    return foveae, labels
