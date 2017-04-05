@@ -48,6 +48,6 @@ keep_prob = [0.5, 0.6, 0.7]
 # Representations
 pred_scales = [0.75, 1.0, 1.5]
 bins_y = 12
-bins_x = 26
+bins_x = 16
 pred_batch = 64
 assert ((bins_y*bins_x) % pred_batch) == 0, 'pred batch is not a factor of the fovea number'

@@ -59,13 +59,24 @@ with tf.Session(graph = fish_finder) as session :
 
             img_arr, label_arr = fd.generate_batch(batch_key_list, epoch_dictionary, fov_size = fov_size, label_dict = label_dict)
             if len(epoch_keys) > batch_size :
-                feed_dict = {train_images : img_arr,
-                             train_labels : label_arr,
-                             learning_rate : float(open('learning_rate.txt', 'r').read().strip())
-                             }
+                if (epochs_completed == 0) and ((total_fovea / batch_size) % 5 ) == 0:
+                    feed_dict = {train_images : img_arr,
+                                 train_labels : label_arr,
+                                 learning_rate : float(open('learning_rate.txt', 'r').read().strip())
+                                 }
 
-                _ = session.run([train_op, cross_entropy], feed_dict = feed_dict)
-                total_fovea += batch_size
+                    _, ce = session.run([train_op, cross_entropy], feed_dict = feed_dict)
+                    print("Batch Xent value:", ce)
+                    total_fovea += batch_size
+
+                else :
+                    feed_dict = {train_images : img_arr,
+                                 train_labels : label_arr,
+                                 learning_rate : float(open('learning_rate.txt', 'r').read().strip())
+                                 }
+
+                    _ = session.run([train_op], feed_dict = feed_dict)
+                    total_fovea += batch_size
             else : # NOTE : This is the last batch before epoch ends ; summarize to tensorboard
                 feed_dict = {train_images : img_arr,
                              train_labels : label_arr,
@@ -97,6 +108,7 @@ with tf.Session(graph = fish_finder) as session :
             train_f_list = fd.generate_filenames_list(subdirectory = 'data/train/', subfolders = True)
             # loop through all images
             for f in train_f_list :
+                train_pred_dict[f] = {}
                 arr_stack_list = fd.generate_fovea(f, fov_size = fov_size, scale = pred_scales, y_bins = bins_y, x_bins = bins_x, pixel_norm = 'centre')
                 # loop through arr_stack_list
                 for i, arr_stack in enumerate(arr_stack_list) :
@@ -110,8 +122,7 @@ with tf.Session(graph = fish_finder) as session :
                         else :
                             stacked_preds = np.concatenate([stacked_preds, session.run(stack_prediction, feed_dict = {img_stack : batch_stack})])
                         cursor += pred_batch
-
-                    train_pred_dict[f] = {pred_scales[i] : stacked_preds}
+                    train_pred_dict[f].update({pred_scales[i] : stacked_preds})
 
             with open(md+'/train_prediction_stacks_dictionary.pickle', 'wb') as ftrainpsd :
                 pickle.dump(train_pred_dict, ftrainpsd)
@@ -123,6 +134,7 @@ with tf.Session(graph = fish_finder) as session :
             test_f_list = fd.generate_filenames_list(subdirectory = 'data/test_stg1/', subfolders = False)
 
             for f in test_f_list :
+                test_pred_list[f] = {}
                 arr_stack_list = fd.generate_fovea(f, fov_size = fov_size, scale = pred_scales, y_bins = bins_y , x_bins = bins_x, pixel_norm = 'centre')
                 # loop through arr_stack_list
                 for i, arr_stack in enumerate(arr_stack_list) :
@@ -136,7 +148,7 @@ with tf.Session(graph = fish_finder) as session :
                         else :
                             stacked_preds = np.concatenate([stacked_preds, session.run(stack_prediction, feed_dict = {img_stack : batch_stack})])
                         cursor += pred_batch
-                    test_pred_dict[f] = {pred_scales[i] : stacked_preds}
+                    test_pred_dict[f].update({pred_scales[i] : stacked_preds})
 
             with open(md+'/test_prediction_stacks_dictionary.pickle', 'wb') as ftpsd :
                 pickle.dump(test_pred_dict, ftpsd)

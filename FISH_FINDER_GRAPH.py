@@ -215,7 +215,7 @@ with fish_finder.as_default() :
         def fc(data, W, b, keep_prob = keep_prob) :
             """Convenience function for dense layer with dropout"""
             fc = tf.nn.dropout(
-                    tf.nn.relu(
+                    tf.nn.tanh(
                             tf.matmul(data, W) + b,
                             ),
                     keep_prob)
@@ -237,13 +237,14 @@ with fish_finder.as_default() :
             epoch_size = tf.placeholder(tf.int32, shape = ())
         with tf.name_scope('Network') :
             conv_output = convolutions(train_images)
+            tf.summary.histogram('Conv_Output', conv_output)
             dense_input = tf.contrib.layers.flatten(conv_output)
             dense_output = dense_layers(dense_input, keep_prob = keep_prob)
         with tf.name_scope('Classifier') :
             logits = tf.matmul(dense_output, W_clf) + b_clf
         with tf.name_scope('Backpropigation') :
-            xent = tf.nn.softmax_cross_entropy_with_logits(
-                        logits = logits, labels = train_labels)
+            xent = tf.nn.sigmoid_cross_entropy_with_logits(
+                        logits = logits, targets = train_labels)
             cross_entropy = tf.reduce_mean(xent)
             cost = cross_entropy # + regularization or other cost amendment?
 
