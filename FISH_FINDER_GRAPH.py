@@ -64,12 +64,12 @@ with fish_finder.as_default() :
                 b_conv11 = tf.Variable(np.load(pretrained_path+'b_conv_11.npy'), trainable = True)
                 tf.summary.histogram('W_conv11', W_conv11)
                 tf.summary.histogram('b_conv11', b_conv11)
-            """
             with tf.name_scope('Convolution_12') :
                 W_conv12 = tf.Variable(np.load(pretrained_path+'W_conv_12.npy'), trainable = False)
                 b_conv12 = tf.Variable(np.load(pretrained_path+'b_conv_12.npy'), trainable = False)
                 tf.summary.histogram('W_conv12', W_conv12)
                 tf.summary.histogram('b_conv12', b_conv12)
+            """
             with tf.name_scope('Convolution_13') :
                 W_conv13 = tf.Variable(np.load(pretrained_path+'W_conv_13.npy'), trainable = False)
                 b_conv13 = tf.Variable(np.load(pretrained_path+'b_conv_13.npy'), trainable = False)
@@ -108,8 +108,8 @@ with fish_finder.as_default() :
                 tf.summary.histogram('W_fc3', W_fc3)
                 tf.summary.histogram('b_fc3', b_fc3)
             with tf.name_scope('dense_4') :
-                W_fc3 = tf.Variable(tf.truncated_normal([fc_depth[2], fc_depth[3]], stddev = stddev ))
-                b_fc3 = tf.Variable(tf.zeros([fc_depth[3]]))
+                W_fc4 = tf.Variable(tf.truncated_normal([fc_depth[2], fc_depth[3]], stddev = stddev ))
+                b_fc4 = tf.Variable(tf.zeros([fc_depth[3]]))
                 tf.summary.histogram('W_fc4', W_fc4)
                 tf.summary.histogram('b_fc4', b_fc4)
         with tf.variable_scope('Classifier') :
@@ -192,6 +192,7 @@ with fish_finder.as_default() :
                                     ksize = [1, pool_kernel, pool_kernel,1],
                                     strides = [1, pool_stride, pool_stride, 1],
                                     padding ='VALID')
+            """
             conv_layer = tf.nn.relu(
                                 tf.nn.conv2d(conv_layer, filter = W_conv13,
                                     strides = [1, conv_stride, conv_stride, 1],
@@ -212,6 +213,7 @@ with fish_finder.as_default() :
                                     ksize = [1, pool_kernel, pool_kernel,1],
                                     strides = [1, pool_stride, pool_stride, 1],
                                     padding ='VALID')
+            """
         return conv_layer
 
     def dense_layers(data, keep_prob) :
@@ -255,7 +257,7 @@ with fish_finder.as_default() :
             logits = tf.matmul(dense_output, W_clf) + b_clf
         with tf.name_scope('Backpropigation') :
             xent = tf.nn.softmax_cross_entropy_with_logits(
-                        logits = logits, targets = train_labels)
+                        logits = logits, labels = train_labels)
             cross_entropy = tf.reduce_mean(xent)
             cost = cross_entropy # + regularization or other cost amendment?
 
@@ -292,6 +294,6 @@ with fish_finder.as_default() :
         with tf.name_scope('Network') :
             stack_conv_output = convolutions(img_stack)
             stack_dense_input = tf.contrib.layers.flatten(stack_conv_output)
-            stack_dense_output = dense_layers(stack_dense_input, keep_prob = [1.0,1.0,1.0])
+            stack_dense_output = dense_layers(stack_dense_input, keep_prob = [1.0,1.0,1.,1.0])
         with tf.name_scope('Classifier') :
             stack_prediction = tf.nn.softmax(tf.matmul(stack_dense_output, W_clf) + b_clf)
