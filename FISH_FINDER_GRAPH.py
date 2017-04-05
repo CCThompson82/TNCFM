@@ -127,8 +127,12 @@ with fish_finder.as_default() :
         Emulates VGG-19 architecture.
         """
         with tf.name_scope('Convolution') :
+            conv_layer = tf.nn.max_pool(data,
+                                          ksize=[1, pool_kernel, pool_kernel, 1],
+                                          strides = [1, pool_stride, pool_stride, 1],
+                                          padding = 'VALID')
             conv_layer = tf.nn.relu(
-                                tf.nn.conv2d(data, filter = W_conv1,
+                                tf.nn.conv2d(conv_layer, filter = W_conv1,
                                     strides = [1, conv_stride, conv_stride, 1],
                                     padding = 'SAME') + b_conv1)
             conv_layer = tf.nn.max_pool(
@@ -241,10 +245,6 @@ with fish_finder.as_default() :
     with tf.name_scope('Training') :
         with tf.name_scope('Input') :
             train_images = tf.placeholder(tf.float32, shape = [batch_size, fov_size, fov_size, num_channels])
-            train_images = tf.nn.max_pool(train_images,
-                                          ksize=[1, pool_kernel, pool_kernel, 1],
-                                          strides = [1, pool_stride, pool_stride, 1],
-                                          padding = 'VALID')
             train_labels = tf.placeholder(tf.float32, shape = [batch_size, num_labels])
             learning_rate = tf.placeholder(tf.float32, shape = () )
             epoch_size = tf.placeholder(tf.int32, shape = ())
@@ -287,13 +287,9 @@ with fish_finder.as_default() :
     with tf.name_scope('Prediction') :
         with tf.name_scope('Input') :
             img_stack = tf.placeholder(tf.float32, shape = [pred_batch, fov_size, fov_size, num_channels])
-            img_stack = tf.nn.max_pool(img_stack,
-                                          ksize=[1, pool_kernel, pool_kernel, 1],
-                                          strides = [1, pool_stride, pool_stride, 1],
-                                          padding = 'VALID')
         with tf.name_scope('Network') :
             stack_conv_output = convolutions(img_stack)
             stack_dense_input = tf.contrib.layers.flatten(stack_conv_output)
-            stack_dense_output = dense_layers(stack_dense_input, keep_prob = [1.0,1.0,1.,1.0])
+            stack_dense_output = dense_layers(stack_dense_input, keep_prob = [1.0,1.0,1.0,1.0])
         with tf.name_scope('Classifier') :
             stack_prediction = tf.nn.softmax(tf.matmul(stack_dense_output, W_clf) + b_clf)
