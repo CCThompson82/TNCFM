@@ -10,23 +10,23 @@ with fish_finder.as_default() :
     with tf.variable_scope('Variables') :
         with tf.variable_scope('Convolutions') :
             with tf.name_scope('Convolution_1') :
-                W_conv1 = tf.Variable(np.load(pretrained_path+'W_conv_1.npy'), trainable = True)
-                b_conv1 = tf.Variable(np.load(pretrained_path+'b_conv_1.npy'), trainable = True)
+                W_conv1 = tf.Variable(np.load(pretrained_path+'W_conv_1.npy'), trainable = False)
+                b_conv1 = tf.Variable(np.load(pretrained_path+'b_conv_1.npy'), trainable = False)
                 tf.summary.histogram('W_conv1', W_conv1)
                 tf.summary.histogram('b_conv1', b_conv1)
             with tf.name_scope('Convolution_2') :
-                W_conv2 = tf.Variable(np.load(pretrained_path+'W_conv_2.npy'), trainable = True)
-                b_conv2 = tf.Variable(np.load(pretrained_path+'b_conv_2.npy'), trainable = True)
+                W_conv2 = tf.Variable(np.load(pretrained_path+'W_conv_2.npy'), trainable = False)
+                b_conv2 = tf.Variable(np.load(pretrained_path+'b_conv_2.npy'), trainable = False)
                 tf.summary.histogram('W_conv2', W_conv2)
                 tf.summary.histogram('b_conv2', b_conv2)
             with tf.name_scope('Convolution_3') :
-                W_conv3 = tf.Variable(np.load(pretrained_path+'W_conv_3.npy'), trainable = True)
-                b_conv3 = tf.Variable(np.load(pretrained_path+'b_conv_3.npy'), trainable = True)
+                W_conv3 = tf.Variable(np.load(pretrained_path+'W_conv_3.npy'), trainable = False)
+                b_conv3 = tf.Variable(np.load(pretrained_path+'b_conv_3.npy'), trainable = False)
                 tf.summary.histogram('W_conv3', W_conv3)
                 tf.summary.histogram('b_conv3', b_conv3)
             with tf.name_scope('Convolution_4') :
-                W_conv4 = tf.Variable(np.load(pretrained_path+'W_conv_4.npy'), trainable = True)
-                b_conv4 = tf.Variable(np.load(pretrained_path+'b_conv_4.npy'), trainable = True)
+                W_conv4 = tf.Variable(np.load(pretrained_path+'W_conv_4.npy'), trainable = False)
+                b_conv4 = tf.Variable(np.load(pretrained_path+'b_conv_4.npy'), trainable = False)
                 tf.summary.histogram('W_conv4', W_conv4)
                 tf.summary.histogram('b_conv4', b_conv4)
             with tf.name_scope('Convolution_5') :
@@ -127,7 +127,7 @@ with fish_finder.as_default() :
         Emulates VGG-19 architecture.
         """
         with tf.name_scope('Convolution') :
-            conv_layer = tf.nn.max_pool(data,
+            conv_layer = tf.nn.avg_pool(data,
                                           ksize=[1, pool_kernel, pool_kernel, 1],
                                           strides = [1, pool_stride, pool_stride, 1],
                                           padding = 'VALID')
@@ -147,7 +147,7 @@ with fish_finder.as_default() :
                                 tf.nn.conv2d(conv_layer, filter = W_conv3,
                                     strides = [1, conv_stride, conv_stride, 1],
                                     padding = 'SAME') + b_conv3)
-            conv_layer = tf.nn.max_pool(
+            short_vgg_representation = tf.nn.max_pool(
                                     tf.nn.relu(
                                         tf.nn.conv2d(conv_layer, filter = W_conv4,
                                             strides = [1, conv_stride, conv_stride, 1],
@@ -156,7 +156,7 @@ with fish_finder.as_default() :
                                     strides = [1, pool_stride, pool_stride, 1],
                                     padding ='VALID')
             conv_layer = tf.nn.relu(
-                                tf.nn.conv2d(conv_layer, filter = W_conv5,
+                                tf.nn.conv2d(short_vgg_representation, filter = W_conv5,
                                     strides = [1, conv_stride, conv_stride, 1],
                                     padding = 'SAME') + b_conv5)
 
@@ -218,7 +218,7 @@ with fish_finder.as_default() :
                                     strides = [1, pool_stride, pool_stride, 1],
                                     padding ='VALID')
             """
-        return conv_layer
+        return conv_layer, short_vgg_representation
 
     def dense_layers(data, keep_prob) :
         """
@@ -249,7 +249,7 @@ with fish_finder.as_default() :
             learning_rate = tf.placeholder(tf.float32, shape = () )
             epoch_size = tf.placeholder(tf.int32, shape = ())
         with tf.name_scope('Network') :
-            conv_output = convolutions(train_images)
+            conv_output, vgg_check = convolutions(train_images)
             tf.summary.histogram('Conv_Output', conv_output)
             dense_input = tf.contrib.layers.flatten(conv_output)
             dense_output = dense_layers(dense_input, keep_prob = keep_prob)
@@ -288,7 +288,7 @@ with fish_finder.as_default() :
         with tf.name_scope('Input') :
             img_stack = tf.placeholder(tf.float32, shape = [pred_batch, fov_size, fov_size, num_channels])
         with tf.name_scope('Network') :
-            stack_conv_output = convolutions(img_stack)
+            stack_conv_output, vgg_test_check = convolutions(img_stack)
             stack_dense_input = tf.contrib.layers.flatten(stack_conv_output)
             stack_dense_output = dense_layers(stack_dense_input, keep_prob = [1.0,1.0,1.0,1.0])
         with tf.name_scope('Classifier') :

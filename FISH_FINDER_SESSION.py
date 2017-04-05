@@ -49,7 +49,7 @@ with tf.Session(graph = fish_finder) as session :
 
         # Generate an epoch fovea dicionary to aid in batch image loading
         epoch_dictionary, epoch_keys = fd.generate_epoch_dictionary(fovea_dictionary = fovea_dictionary)
-
+        start = datetime.now()
         while len(epoch_keys) > batch_size :
             # Choose batch_size number of keys
             batch_key_list = []
@@ -59,14 +59,15 @@ with tf.Session(graph = fish_finder) as session :
 
             img_arr, label_arr = fd.generate_batch(batch_key_list, epoch_dictionary, fov_size = fov_size, label_dict = label_dict)
             if len(epoch_keys) > batch_size :
-                if (epochs_completed == 0) and ((total_fovea / batch_size) % 5 ) == 0:
+                if (epochs_completed < 2) and ((total_fovea / batch_size) % 5 ) == 0:
                     feed_dict = {train_images : img_arr,
                                  train_labels : label_arr,
                                  learning_rate : float(open('learning_rate.txt', 'r').read().strip())
                                  }
 
-                    _, ce = session.run([train_op, cross_entropy], feed_dict = feed_dict)
+                    _, ce, vgg = session.run([train_op, cross_entropy, vgg_check], feed_dict = feed_dict)
                     print("Batch Xent value:", ce)
+                    print("Percent inactive nodes moving into trainable convolution",np.mean(vgg==0))
                     total_fovea += batch_size
 
                 else :
@@ -88,10 +89,11 @@ with tf.Session(graph = fish_finder) as session :
                 total_fovea += batch_size
                 writer.add_summary(summary_fetch, total_fovea)
 
-
+        end = datetime.now()
+        epoch_time = (end - start).total_seconds()
         epochs_completed += 1
         saver.save(session, md+'/checkpoint', global_step = epochs_completed)
-        print("Epoch {} completed : {} fovea observed. Model checkpoint created!".format(epochs_completed, total_fovea))
+        print("Epoch {} completed : {} fovea observed in {} s (fovea/s : {}). Model checkpoint created!".format(epochs_completed, total_fovea, epoch_time, len(epoch_dictionary)/epoch_time))
         meta_dict[epochs_completed] = {'Num_epochs' : epochs_completed,
                                'fovea_trained' : total_fovea,
                                'fov_pixels' : fov_size,
